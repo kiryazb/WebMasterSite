@@ -56,3 +56,5 @@ class RoleChecker:
                 detail='not enough permissions'
             )
         return True
+
+check_current_user_isnt_search = RoleChecker(required_permissions={"User", "Administrator", "Superuser"})

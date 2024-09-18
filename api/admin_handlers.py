@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.auth_config import current_user, RoleChecker
+from api.auth.auth_config import current_user, check_current_user_isnt_search, RoleChecker
 from api.auth.models import User
 from api.config.models import Config, Group, List, ListLrSearchSystem, ListURI, LiveSearchList, LiveSearchListQuery, UserQueryCount, YandexLr
 from api.config.utils import get_all_configs, get_all_groups, get_all_groups_for_user, get_all_roles, get_all_user, get_config_names, get_group_names, get_groups_names_dict, get_lists_names, get_live_search_lists_names
@@ -63,7 +63,8 @@ async def register(request: Request, user: User = Depends(current_user)):
 async def show_profile(request: Request,
                        username: str,
                        user=Depends(current_user),
-                       session: AsyncSession = Depends(get_db_general)):
+                       session: AsyncSession = Depends(get_db_general),
+                       required: bool = Depends(check_current_user_isnt_search)):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
 
@@ -100,7 +101,7 @@ async def show_list(
     request: Request,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     config_id = request.session["config"]["config_id"]
     group_id = request.session["group"]["group_id"]
@@ -185,7 +186,7 @@ async def change_list_visibility(
     session: AsyncSession = Depends(get_db_general),
     required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
 ):
-    
+
     is_public = data["is_public"]
     list_name = data["name"]
 
@@ -249,7 +250,7 @@ async def show_edit_list(
     list_id: int,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
 
     group_name = request.session["group"].get("name", "")
@@ -282,7 +283,7 @@ async def delete_list_record(
     uri: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     uri_model = (await session.execute(select(ListURI).where(and_(ListURI.uri == uri["uri"], ListURI.list_id == list_id)))).scalars().first()
 
@@ -303,7 +304,7 @@ async def change_list_record(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     print(data)
 
@@ -314,7 +315,7 @@ async def change_list_record(
     uri_model.uri = new_uri
 
     await session.commit()
-    
+
     return {
         "status": 200,
         "message": f"change uri from {old_uri} to {new_uri}"
@@ -324,11 +325,11 @@ async def change_list_record(
 @admin_router.post("/list/{list_id}/edit")
 async def add_uri(
     request: Request,
-    list_id: int,   
+    list_id: int,
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     record = ListURI(
         uri=data["uri"].strip(),
@@ -350,7 +351,7 @@ async def show_live_search(
     request: Request,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser", "Search"}))
 ):
     config_id = request.session["config"]["config_id"]
     group_id = request.session["group"]["group_id"]
@@ -364,7 +365,7 @@ async def show_live_search(
                                       {"request": request,
                                        "user": user,
                                        "config_names": config_names,
-                                       "group_names": group_names,  
+                                       "group_names": group_names,
                                        "list_names": list_names,
                                        })
 
@@ -397,7 +398,7 @@ async def add_live_search_list(
 
         session.add_all(new_queries)
         await session.commit()
-        
+
     except IntegrityError:
         await session.rollback()
         return JSONResponse(
@@ -454,7 +455,7 @@ async def show_edit_live_search(
     list_id: int,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
 
     group_name = request.session["group"].get("name", "")
@@ -483,7 +484,7 @@ async def delete_live_search_record(
     query: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     query_model = (await session.execute(select(LiveSearchListQuery).where(and_(LiveSearchListQuery.query == query["query"], LiveSearchListQuery.list_id == list_id)))).scalars().first()
 
@@ -504,7 +505,7 @@ async def change_live_search_record(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     print(data)
 
@@ -515,7 +516,7 @@ async def change_live_search_record(
     query_model.query = new_uri
 
     await session.commit()
-    
+
     return {
         "status": 200,
         "message": f"change query from {old_uri} to {new_uri}"
@@ -525,11 +526,11 @@ async def change_live_search_record(
 @admin_router.post("/live_search/{list_id}/edit")
 async def add_live_search_record(
     request: Request,
-    list_id: int,   
+    list_id: int,
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     record = LiveSearchListQuery(
         query=data["uri"].strip(),
@@ -552,7 +553,7 @@ async def show_list_menu(
     list_id: int,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -585,7 +586,7 @@ async def add_lr_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     list_id, region_code, search_system = data.values()
     list_id, region_code = int(list_id), int(region_code)
@@ -610,7 +611,7 @@ async def delete_lr_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     print(data)
     list_id, region_code, search_system = data.values()
@@ -618,10 +619,10 @@ async def delete_lr_list(
 
     res = (await session.execute(select(ListLrSearchSystem).where(
         and_(
-            ListLrSearchSystem.list_id == list_id, 
-            ListLrSearchSystem.lr == region_code, 
+            ListLrSearchSystem.list_id == list_id,
+            ListLrSearchSystem.lr == region_code,
             ListLrSearchSystem.search_system == search_system)))).scalars().first()
-    
+
     await session.delete(res)
 
     await session.commit()
@@ -637,7 +638,7 @@ async def get_regions(
     request: Request,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    required: bool = Depends(check_current_user_isnt_search)
 ):
     regions = (await session.execute(select(YandexLr))).scalars().all()
     region_dict = {region.Geo: region.Geoid for region in regions}
@@ -680,7 +681,7 @@ async def show_user_menu(
                                     "all_roles_dict_reverse": all_roles_dict_reverse,
                                     "groups_dict_names": groups_dict_names,
                                     "groups_dict": groups_dict,
-                                    "groups_dict_reverse": groups_dict_reverse, 
+                                    "groups_dict_reverse": groups_dict_reverse,
                                     })
 
 
@@ -725,11 +726,7 @@ async def show_group_menu(
                                     "all_roles_dict_reverse": all_roles_dict_reverse,
                                     "groups_dict_names": groups_dict_names,
                                     "groups_dict": groups_dict,
-                                    "groups_dict_reverse": groups_dict_reverse, 
+                                    "groups_dict_reverse": groups_dict_reverse,
                                     "all_groups": all_groups,
                                     "all_configs": all_configs,
                                     })
-
-
-
-

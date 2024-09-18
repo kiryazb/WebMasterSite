@@ -17,7 +17,7 @@ from api.actions.indicators import _get_indicators_from_db, _get_top_query, _get
 from api.actions.utils import get_day_of_week
 from api.auth.models import User
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, check_current_user_isnt_search
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +37,7 @@ logger.addHandler(stream_handler)
 templates = Jinja2Templates(directory="static")
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(check_current_user_isnt_search)])
 
 @router.get("/")
 async def get_history(
