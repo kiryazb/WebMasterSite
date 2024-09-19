@@ -58,3 +58,4 @@ class RoleChecker:
         return True
 
 check_current_user_isnt_search = RoleChecker(required_permissions={"User", "Administrator", "Superuser"})
+check_current_user_has_any_role = RoleChecker(required_permissions={"User", "Administrator", "Superuser", "Search"})

@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.auth_config import current_user, check_current_user_isnt_search, RoleChecker
+from api.auth.auth_config import current_user, check_current_user_has_any_role, check_current_user_isnt_search, RoleChecker
 from api.auth.models import User
 from api.config.models import Config, Group, List, ListLrSearchSystem, ListURI, LiveSearchList, LiveSearchListQuery, UserQueryCount, YandexLr
 from api.config.utils import get_all_configs, get_all_groups, get_all_groups_for_user, get_all_roles, get_all_user, get_config_names, get_group_names, get_groups_names_dict, get_lists_names, get_live_search_lists_names
@@ -250,7 +250,7 @@ async def show_edit_list(
     list_id: int,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
 
     group_name = request.session["group"].get("name", "")
@@ -283,7 +283,7 @@ async def delete_list_record(
     uri: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     uri_model = (await session.execute(select(ListURI).where(and_(ListURI.uri == uri["uri"], ListURI.list_id == list_id)))).scalars().first()
 
@@ -304,7 +304,7 @@ async def change_list_record(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     print(data)
 
@@ -329,7 +329,7 @@ async def add_uri(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     record = ListURI(
         uri=data["uri"].strip(),
@@ -376,7 +376,7 @@ async def add_live_search_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search"}))
 ):
 
     main_domain, list_name, query_list = data.values()
@@ -455,7 +455,7 @@ async def show_edit_live_search(
     list_id: int,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
 
     group_name = request.session["group"].get("name", "")
@@ -484,7 +484,7 @@ async def delete_live_search_record(
     query: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     query_model = (await session.execute(select(LiveSearchListQuery).where(and_(LiveSearchListQuery.query == query["query"], LiveSearchListQuery.list_id == list_id)))).scalars().first()
 
@@ -505,7 +505,7 @@ async def change_live_search_record(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     print(data)
 
@@ -530,7 +530,7 @@ async def add_live_search_record(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     record = LiveSearchListQuery(
         query=data["uri"].strip(),
@@ -553,7 +553,7 @@ async def show_list_menu(
     list_id: int,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -586,7 +586,7 @@ async def add_lr_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     list_id, region_code, search_system = data.values()
     list_id, region_code = int(list_id), int(region_code)
@@ -611,7 +611,7 @@ async def delete_lr_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     print(data)
     list_id, region_code, search_system = data.values()
@@ -638,7 +638,7 @@ async def get_regions(
     request: Request,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(check_current_user_isnt_search)
+    required: bool = Depends(check_current_user_has_any_role)
 ):
     regions = (await session.execute(select(YandexLr))).scalars().all()
     region_dict = {region.Geo: region.Geoid for region in regions}
