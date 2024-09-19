@@ -15,7 +15,7 @@ from openpyxl import Workbook
 from api.actions.query_url_merge import _get_merge_query, _get_merge_with_pagination, _get_merge_with_pagination_and_like, _get_merge_with_pagination_and_like_sort, _get_merge_with_pagination_sort
 from api.auth.models import User
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, check_current_user_isnt_search
 from api.config.utils import get_config_names, get_group_names
 from db.models import QueryUrlsMergeLogs
 from db.session import connect_db, get_db_general
@@ -37,7 +37,7 @@ logger.addHandler(stream_handler)
 templates = Jinja2Templates(directory="static")
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(check_current_user_isnt_search)])
 
 @router.get("/menu/merge_database/")
 async def show_menu_merge_page(request: Request,
@@ -74,7 +74,7 @@ async def get_merge(request: Request,
     all_dates = await get_all_dates(async_session, QueryUrlsMergeLogs)
 
     last_update_date = None
-    
+
     if all_dates:
         last_update_date = all_dates[0][0].strftime(date_format_2)
 
@@ -92,8 +92,8 @@ async def get_merge(request: Request,
 
 @router.post("/")
 async def get_merge(
-    request: Request, 
-    data_request: dict, 
+    request: Request,
+    data_request: dict,
     user: User = Depends(current_user)
     ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
