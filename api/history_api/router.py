@@ -17,7 +17,7 @@ from api.actions.indicators import _get_indicators_from_db, _get_top_query, _get
 from api.actions.utils import get_day_of_week
 from api.auth.models import User
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, RoleChecker
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,7 +43,8 @@ router = APIRouter()
 async def get_history(
         request: Request,
         user: User = Depends(current_user),
-        session: AsyncSession = Depends(get_db_general)
+        session: AsyncSession = Depends(get_db_general),
+        required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
         ):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -69,7 +70,8 @@ async def get_history(
 @router.post("/")
 async def get_history(
         request: Request, data_request: dict,
-        user: User = Depends(current_user)
+        user: User = Depends(current_user),
+        required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
 ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')

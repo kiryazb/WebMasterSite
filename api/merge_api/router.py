@@ -12,10 +12,11 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from openpyxl import Workbook
 
-from api.actions.query_url_merge import _get_merge_query, _get_merge_with_pagination, _get_merge_with_pagination_and_like, _get_merge_with_pagination_and_like_sort, _get_merge_with_pagination_sort
+from api.actions.query_url_merge import _get_merge_query, _get_merge_with_pagination, \
+    _get_merge_with_pagination_and_like, _get_merge_with_pagination_and_like_sort, _get_merge_with_pagination_sort
 from api.auth.models import User
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, RoleChecker
 from api.config.utils import get_config_names, get_group_names
 from db.models import QueryUrlsMergeLogs
 from db.session import connect_db, get_db_general
@@ -26,7 +27,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.utils import get_all_dates
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 stream_handler = logging.StreamHandler(sys.stdout)
@@ -36,13 +36,14 @@ logger.addHandler(stream_handler)
 
 templates = Jinja2Templates(directory="static")
 
-
 router = APIRouter()
+
 
 @router.get("/menu/merge_database/")
 async def show_menu_merge_page(request: Request,
                                user: User = Depends(current_user),
-                               session: AsyncSession = Depends(get_db_general)):
+                               session: AsyncSession = Depends(get_db_general),
+                               required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -62,9 +63,9 @@ async def show_menu_merge_page(request: Request,
 
 @router.get("/")
 async def get_merge(request: Request,
-                         user: User = Depends(current_user),
-                         session: AsyncSession = Depends(get_db_general)
-                         ):
+                    user: User = Depends(current_user),
+                    session: AsyncSession = Depends(get_db_general)
+                    ):
     date = request.query_params.get("date")
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -74,7 +75,7 @@ async def get_merge(request: Request,
     all_dates = await get_all_dates(async_session, QueryUrlsMergeLogs)
 
     last_update_date = None
-    
+
     if all_dates:
         last_update_date = all_dates[0][0].strftime(date_format_2)
 
@@ -92,10 +93,10 @@ async def get_merge(request: Request,
 
 @router.post("/")
 async def get_merge(
-    request: Request, 
-    data_request: dict, 
-    user: User = Depends(current_user)
-    ):
+        request: Request,
+        data_request: dict,
+        user: User = Depends(current_user)
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -324,7 +325,8 @@ async def generate_excel_merge(request: Request, data_request: dict, user: User 
                     if impressions > 0:
                         total_position = round(position / count, 2)
                         total_ctr = round(ctr / count, 2)
-                        info["Result"] = [total_position, total_clicks, impressions, round(total_clicks * 100 / impressions, 2)]
+                        info["Result"] = [total_position, total_clicks, impressions,
+                                          round(total_clicks * 100 / impressions, 2)]
                     else:
                         total_position = 0
                         total_ctr = 0
@@ -444,7 +446,8 @@ async def generate_csv_merge(request: Request, data_request: dict, user: User = 
                     if impressions > 0:
                         total_position = round(position / count, 2)
                         total_ctr = round(ctr / count, 2)
-                        info["Result"] = [total_position, total_clicks, impressions, round(total_clicks * 100 / impressions, 2)]
+                        info["Result"] = [total_position, total_clicks, impressions,
+                                          round(total_clicks * 100 / impressions, 2)]
                     else:
                         total_position = 0
                         total_ctr = 0

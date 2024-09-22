@@ -13,10 +13,11 @@ from openpyxl import Workbook
 from sqlalchemy import delete
 
 from api.actions.actions import get_last_date, get_last_load_date
-from api.actions.urls import _get_urls_with_pagination, _get_urls_with_pagination_and_like, _get_urls_with_pagination_and_like_sort, _get_urls_with_pagination_sort
+from api.actions.urls import _get_urls_with_pagination, _get_urls_with_pagination_and_like, \
+    _get_urls_with_pagination_and_like_sort, _get_urls_with_pagination_sort
 from api.auth.models import User
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, RoleChecker
 from api.config.models import List
 from api.config.utils import get_config_names, get_group_names
 from db.models import Metrics
@@ -25,7 +26,6 @@ from db.session import connect_db, get_db_general
 from const import date_format_out, date_format_2
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -36,16 +36,15 @@ logger.addHandler(stream_handler)
 
 templates = Jinja2Templates(directory="static")
 
-
 router = APIRouter()
 
 
 @router.post("/generate_excel_url")
 async def generate_excel_url(
-    request: Request, 
-    data_request: dict, 
-    user: User = Depends(current_user),
-    general_session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        data_request: dict,
+        user: User = Depends(current_user),
+        general_session: AsyncSession = Depends(get_db_general),
 ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
@@ -82,59 +81,59 @@ async def generate_excel_url(
         if data_request["sort_result"]:
             if data_request["search_text"] == "":
                 urls = await _get_urls_with_pagination_sort(
-                    start_el, 
-                    data_request["length"], 
+                    start_el,
+                    data_request["length"],
                     start_date,
-                    end_date, 
+                    end_date,
                     data_request["sort_desc"],
                     data_request["list_name"],
                     async_session,
-                    general_session,)
+                    general_session, )
             else:
                 urls = await _get_urls_with_pagination_and_like_sort(
-                    start_el, 
+                    start_el,
                     data_request["length"],
-                    start_date, 
+                    start_date,
                     end_date,
                     data_request["search_text"],
                     data_request["sort_desc"],
                     data_request["list_name"],
                     async_session,
-                    general_session,)
+                    general_session, )
         else:
             if data_request["search_text"] == "":
                 urls = await _get_urls_with_pagination(
-                    start_el, 
-                    data_request["length"], 
+                    start_el,
+                    data_request["length"],
                     start_date,
-                    end_date, 
-                    data_request["button_state"], 
+                    end_date,
+                    data_request["button_state"],
                     state_date,
                     data_request["metric_type"],
                     data_request["state_type"],
                     data_request["list_name"],
                     async_session,
                     general_session,
-                    )
+                )
             else:
                 urls = await _get_urls_with_pagination_and_like(
-                    start_el, 
+                    start_el,
                     data_request["length"],
-                    start_date, 
-                    end_date, 
+                    start_date,
+                    end_date,
                     data_request["search_text"],
-                    data_request["button_state"], 
+                    data_request["button_state"],
                     state_date,
                     data_request["metric_type"],
                     data_request["state_type"],
                     data_request["list_name"],
                     async_session,
-                    general_session,)
+                    general_session, )
         start += 1
         try:
             if urls:
                 urls.sort(key=lambda x: x[-1])
-            
+
             grouped_data = [(key, sorted(list(group), key=lambda x: x[0])) for key, group in
                             groupby(urls, key=lambda x: x[-1])]
 
@@ -144,7 +143,7 @@ async def generate_excel_url(
                         grouped_data.sort(
                             key=lambda x: next(
                                 (
-                                    sub_item[1] if sub_item[1] != 0 else 
+                                    sub_item[1] if sub_item[1] != 0 else
                                     (-float('inf') if data_request["button_state"] == "decrease" else float('inf'))
                                     for sub_item in x[1]
                                     if sub_item[0] == state_date
@@ -154,14 +153,18 @@ async def generate_excel_url(
                             reverse=data_request["button_state"] == "decrease"
                         )
                     elif data_request["metric_type"] == "K":
-                        grouped_data.sort(key=lambda x: next((sub_item[2] for sub_item in x[1] if sub_item[0] == state_date), float('-inf')), reverse=data_request["button_state"] == "decrease")
+                        grouped_data.sort(
+                            key=lambda x: next((sub_item[2] for sub_item in x[1] if sub_item[0] == state_date),
+                                               float('-inf')), reverse=data_request["button_state"] == "decrease")
                     elif data_request["metric_type"] == "R":
-                        grouped_data.sort(key=lambda x: next((sub_item[3] for sub_item in x[1] if sub_item[0] == state_date), float('-inf')), reverse=data_request["button_state"] == "decrease")
+                        grouped_data.sort(
+                            key=lambda x: next((sub_item[3] for sub_item in x[1] if sub_item[0] == state_date),
+                                               float('-inf')), reverse=data_request["button_state"] == "decrease")
                     elif data_request["metric_type"] == "C":
                         grouped_data.sort(
                             key=lambda x: next(
                                 (
-                                    sub_item[4] if sub_item[4] != 0 else 
+                                    sub_item[4] if sub_item[4] != 0 else
                                     (-float('inf') if data_request["button_state"] == "decrease" else float('inf'))
                                     for sub_item in x[1]
                                     if sub_item[0] == state_date
@@ -174,30 +177,38 @@ async def generate_excel_url(
                     if data_request["metric_type"] == "P":
                         grouped_data.sort(
                             key=lambda x: (
-                                (total := sum(sub_item[1] for sub_item in x[1] if start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
-                                count := sum(1 for sub_item in x[1] if start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
-                                total / count if count > 0 else (
-                                    -float('inf') if data_request["button_state"] == "decrease" else float('inf')
-                                ))[2]
+                                (total := sum(sub_item[1] for sub_item in x[1] if
+                                              start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
+                                 count := sum(1 for sub_item in x[1] if
+                                              start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
+                                 total / count if count > 0 else (
+                                     -float('inf') if data_request["button_state"] == "decrease" else float('inf')
+                                 ))[2]
                             ),
                             reverse=data_request["button_state"] == "decrease"
                         )
                     elif data_request["metric_type"] == "K":
-                        grouped_data.sort( key=lambda x: (sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)), reverse=data_request["button_state"] == "decrease"),
+                        grouped_data.sort(key=lambda x: (
+                            sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                                          reverse=data_request["button_state"] == "decrease"),
                     elif data_request["metric_type"] == "R":
-                        grouped_data.sort( key=lambda x: (sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)), reverse=data_request["button_state"] == "decrease"),
+                        grouped_data.sort(key=lambda x: (
+                            sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                                          reverse=data_request["button_state"] == "decrease"),
                     elif data_request["metric_type"] == "C":
                         grouped_data.sort(
-                            key=lambda x:(
-                                (clicks := (sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
-                                immersions := (sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
-                                clicks / immersions if immersions > 0 else (
-                                    -float('inf') if data_request["button_state"] == "decrease" else float('inf')
-                                ))[2]
+                            key=lambda x: (
+                                (clicks := (
+                                    sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                                 immersions := (
+                                     sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                                 clicks / immersions if immersions > 0 else (
+                                     -float('inf') if data_request["button_state"] == "decrease" else float('inf')
+                                 ))[2]
                             ),
                             reverse=data_request["button_state"] == "decrease"
-                        )   
-        
+                        )
+
         except TypeError as e:
             break
 
@@ -215,7 +226,8 @@ async def generate_excel_url(
                 if stat[1] > 0:
                     count += 1
             if impressions > 0:
-                info["Result"] = [round(position / count, 2), total_clicks, impressions, round(total_clicks * 100 / impressions, 2)]
+                info["Result"] = [round(position / count, 2), total_clicks, impressions,
+                                  round(total_clicks * 100 / impressions, 2)]
             else:
                 info["Result"] = [0, total_clicks, impressions, 0]
             res.append(el[0])
@@ -231,17 +243,17 @@ async def generate_excel_url(
         output.seek(0)
 
     return StreamingResponse(io.BytesIO(output.getvalue()),
-                            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            headers={"Content-Disposition": "attachment;filename='data.xlsx'"})
+                             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                             headers={"Content-Disposition": "attachment;filename='data.xlsx'"})
 
 
 @router.post("/generate_csv_urls")
 async def generate_csv_url(
-    request: Request, 
-    data_request: dict, 
-    user: User = Depends(current_user),
-    general_session: AsyncSession = Depends(get_db_general),
-    ):
+        request: Request,
+        data_request: dict,
+        user: User = Depends(current_user),
+        general_session: AsyncSession = Depends(get_db_general),
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -276,59 +288,59 @@ async def generate_csv_url(
         if data_request["sort_result"]:
             if data_request["search_text"] == "":
                 urls = await _get_urls_with_pagination_sort(
-                    start_el, 
-                    data_request["length"], 
+                    start_el,
+                    data_request["length"],
                     start_date,
-                    end_date, 
+                    end_date,
                     data_request["sort_desc"],
                     data_request["list_name"],
                     async_session,
-                    general_session,)
+                    general_session, )
             else:
                 urls = await _get_urls_with_pagination_and_like_sort(
-                    start_el, 
+                    start_el,
                     data_request["length"],
-                    start_date, 
+                    start_date,
                     end_date,
                     data_request["search_text"],
                     data_request["sort_desc"],
                     data_request["list_name"],
                     async_session,
-                    general_session,)
+                    general_session, )
         else:
             if data_request["search_text"] == "":
                 urls = await _get_urls_with_pagination(
-                    start_el, 
-                    data_request["length"], 
+                    start_el,
+                    data_request["length"],
                     start_date,
-                    end_date, 
-                    data_request["button_state"], 
+                    end_date,
+                    data_request["button_state"],
                     state_date,
                     data_request["metric_type"],
                     data_request["state_type"],
                     data_request["list_name"],
                     async_session,
                     general_session,
-                    )
+                )
             else:
                 urls = await _get_urls_with_pagination_and_like(
-                    start_el, 
+                    start_el,
                     data_request["length"],
-                    start_date, 
-                    end_date, 
+                    start_date,
+                    end_date,
                     data_request["search_text"],
-                    data_request["button_state"], 
+                    data_request["button_state"],
                     state_date,
                     data_request["metric_type"],
                     data_request["state_type"],
                     data_request["list_name"],
                     async_session,
-                    general_session,)
+                    general_session, )
         start += 1
         try:
             if urls:
                 urls.sort(key=lambda x: x[-1])
-            
+
             grouped_data = [(key, sorted(list(group), key=lambda x: x[0])) for key, group in
                             groupby(urls, key=lambda x: x[-1])]
 
@@ -338,7 +350,7 @@ async def generate_csv_url(
                         grouped_data.sort(
                             key=lambda x: next(
                                 (
-                                    sub_item[1] if sub_item[1] != 0 else 
+                                    sub_item[1] if sub_item[1] != 0 else
                                     (-float('inf') if data_request["button_state"] == "decrease" else float('inf'))
                                     for sub_item in x[1]
                                     if sub_item[0] == state_date
@@ -348,14 +360,18 @@ async def generate_csv_url(
                             reverse=data_request["button_state"] == "decrease"
                         )
                     elif data_request["metric_type"] == "K":
-                        grouped_data.sort(key=lambda x: next((sub_item[2] for sub_item in x[1] if sub_item[0] == state_date), float('-inf')), reverse=data_request["button_state"] == "decrease")
+                        grouped_data.sort(
+                            key=lambda x: next((sub_item[2] for sub_item in x[1] if sub_item[0] == state_date),
+                                               float('-inf')), reverse=data_request["button_state"] == "decrease")
                     elif data_request["metric_type"] == "R":
-                        grouped_data.sort(key=lambda x: next((sub_item[3] for sub_item in x[1] if sub_item[0] == state_date), float('-inf')), reverse=data_request["button_state"] == "decrease")
+                        grouped_data.sort(
+                            key=lambda x: next((sub_item[3] for sub_item in x[1] if sub_item[0] == state_date),
+                                               float('-inf')), reverse=data_request["button_state"] == "decrease")
                     elif data_request["metric_type"] == "C":
                         grouped_data.sort(
                             key=lambda x: next(
                                 (
-                                    sub_item[4] if sub_item[4] != 0 else 
+                                    sub_item[4] if sub_item[4] != 0 else
                                     (-float('inf') if data_request["button_state"] == "decrease" else float('inf'))
                                     for sub_item in x[1]
                                     if sub_item[0] == state_date
@@ -368,30 +384,38 @@ async def generate_csv_url(
                     if data_request["metric_type"] == "P":
                         grouped_data.sort(
                             key=lambda x: (
-                                (total := sum(sub_item[1] for sub_item in x[1] if start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
-                                count := sum(1 for sub_item in x[1] if start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
-                                total / count if count > 0 else (
-                                    -float('inf') if data_request["button_state"] == "decrease" else float('inf')
-                                ))[2]
+                                (total := sum(sub_item[1] for sub_item in x[1] if
+                                              start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
+                                 count := sum(1 for sub_item in x[1] if
+                                              start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
+                                 total / count if count > 0 else (
+                                     -float('inf') if data_request["button_state"] == "decrease" else float('inf')
+                                 ))[2]
                             ),
                             reverse=data_request["button_state"] == "decrease"
                         )
                     elif data_request["metric_type"] == "K":
-                        grouped_data.sort( key=lambda x: (sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)), reverse=data_request["button_state"] == "decrease"),
+                        grouped_data.sort(key=lambda x: (
+                            sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                                          reverse=data_request["button_state"] == "decrease"),
                     elif data_request["metric_type"] == "R":
-                        grouped_data.sort( key=lambda x: (sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)), reverse=data_request["button_state"] == "decrease"),
+                        grouped_data.sort(key=lambda x: (
+                            sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                                          reverse=data_request["button_state"] == "decrease"),
                     elif data_request["metric_type"] == "C":
                         grouped_data.sort(
-                            key=lambda x:(
-                                (clicks := (sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
-                                immersions := (sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
-                                clicks / immersions if immersions > 0 else (
-                                    -float('inf') if data_request["button_state"] == "decrease" else float('inf')
-                                ))[2]
+                            key=lambda x: (
+                                (clicks := (
+                                    sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                                 immersions := (
+                                     sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                                 clicks / immersions if immersions > 0 else (
+                                     -float('inf') if data_request["button_state"] == "decrease" else float('inf')
+                                 ))[2]
                             ),
                             reverse=data_request["button_state"] == "decrease"
-                        )   
-            
+                        )
+
         except TypeError as e:
             break
 
@@ -411,7 +435,8 @@ async def generate_csv_url(
                 if stat[1] > 0:
                     count += 1
             if impressions > 0:
-                info["Result"] = [round(position / count, 2), total_clicks, impressions, round(total_clicks * 100 / impressions, 2)]
+                info["Result"] = [round(position / count, 2), total_clicks, impressions,
+                                  round(total_clicks * 100 / impressions, 2)]
             else:
                 info["Result"] = [0, total_clicks, impressions, 0]
             res.append(el[0])
@@ -428,22 +453,22 @@ async def generate_csv_url(
         output.seek(0)
 
     return StreamingResponse(content=output.getvalue(),
-                            headers={"Content-Disposition": "attachment;filename='data.csv'"})
+                             headers={"Content-Disposition": "attachment;filename='data.csv'"})
 
 
 @router.get("/")
 async def get_urls(request: Request,
                    list_name: str = Query(None),
                    user: User = Depends(current_user),
-                   session: AsyncSession = Depends(get_db_general)):
-
+                   session: AsyncSession = Depends(get_db_general),
+                   required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
 
     group_names = await get_group_names(session, user)
 
     DATABASE_NAME = request.session['config'].get('database_name', "")
-    
+
     if DATABASE_NAME:
         async_session = await connect_db(DATABASE_NAME)
 
@@ -460,16 +485,17 @@ async def get_urls(request: Request,
                                        "list_name": list_name,
                                        "last_date": last_date,
                                        }
-                                       )
+                                      )
 
 
 @router.post("/")
 async def get_urls(
-    request: Request, 
-    data_request: dict, 
-    user: User = Depends(current_user),
-    general_session: AsyncSession = Depends(get_db_general)
-    ):
+        request: Request,
+        data_request: dict,
+        user: User = Depends(current_user),
+        general_session: AsyncSession = Depends(get_db_general),
+        required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -484,58 +510,58 @@ async def get_urls(
     if data_request["sort_result"]:
         if data_request["search_text"] == "":
             urls = await _get_urls_with_pagination_sort(
-                data_request["start"], 
-                data_request["length"], 
+                data_request["start"],
+                data_request["length"],
                 start_date,
-                end_date, 
+                end_date,
                 data_request["sort_desc"],
                 data_request["list_name"],
                 async_session,
-                general_session,)
+                general_session, )
         else:
             urls = await _get_urls_with_pagination_and_like_sort(
-                data_request["start"], 
+                data_request["start"],
                 data_request["length"],
-                start_date, 
+                start_date,
                 end_date,
                 data_request["search_text"],
                 data_request["sort_desc"],
                 data_request["list_name"],
                 async_session,
-                general_session,)
+                general_session, )
     else:
         if data_request["search_text"] == "":
             urls = await _get_urls_with_pagination(
-                data_request["start"], 
-                data_request["length"], 
+                data_request["start"],
+                data_request["length"],
                 start_date,
-                end_date, 
-                data_request["button_state"], 
+                end_date,
+                data_request["button_state"],
                 state_date,
                 data_request["metric_type"],
                 data_request["state_type"],
                 data_request["list_name"],
                 async_session,
                 general_session,
-                )
+            )
         else:
             urls = await _get_urls_with_pagination_and_like(
-                data_request["start"], 
+                data_request["start"],
                 data_request["length"],
-                start_date, 
-                end_date, 
+                start_date,
+                end_date,
                 data_request["search_text"],
-                data_request["button_state"], 
+                data_request["button_state"],
                 state_date,
                 data_request["metric_type"],
                 data_request["state_type"],
                 data_request["list_name"],
                 async_session,
-                general_session,)
+                general_session, )
     try:
         if urls:
             urls.sort(key=lambda x: x[-1])
-        
+
         grouped_data = [(key, sorted(list(group), key=lambda x: x[0])) for key, group in
                         groupby(urls, key=lambda x: x[-1])]
 
@@ -545,7 +571,7 @@ async def get_urls(
                     grouped_data.sort(
                         key=lambda x: next(
                             (
-                                sub_item[1] if sub_item[1] != 0 else 
+                                sub_item[1] if sub_item[1] != 0 else
                                 (-float('inf') if data_request["button_state"] == "decrease" else float('inf'))
                                 for sub_item in x[1]
                                 if sub_item[0] == state_date
@@ -555,14 +581,18 @@ async def get_urls(
                         reverse=data_request["button_state"] == "decrease"
                     )
                 elif data_request["metric_type"] == "K":
-                    grouped_data.sort(key=lambda x: next((sub_item[2] for sub_item in x[1] if sub_item[0] == state_date), float('-inf')), reverse=data_request["button_state"] == "decrease")
+                    grouped_data.sort(
+                        key=lambda x: next((sub_item[2] for sub_item in x[1] if sub_item[0] == state_date),
+                                           float('-inf')), reverse=data_request["button_state"] == "decrease")
                 elif data_request["metric_type"] == "R":
-                    grouped_data.sort(key=lambda x: next((sub_item[3] for sub_item in x[1] if sub_item[0] == state_date), float('-inf')), reverse=data_request["button_state"] == "decrease")
+                    grouped_data.sort(
+                        key=lambda x: next((sub_item[3] for sub_item in x[1] if sub_item[0] == state_date),
+                                           float('-inf')), reverse=data_request["button_state"] == "decrease")
                 elif data_request["metric_type"] == "C":
                     grouped_data.sort(
                         key=lambda x: next(
                             (
-                                sub_item[4] if sub_item[4] != 0 else 
+                                sub_item[4] if sub_item[4] != 0 else
                                 (-float('inf') if data_request["button_state"] == "decrease" else float('inf'))
                                 for sub_item in x[1]
                                 if sub_item[0] == state_date
@@ -575,30 +605,37 @@ async def get_urls(
                 if data_request["metric_type"] == "P":
                     grouped_data.sort(
                         key=lambda x: (
-                            (total := sum(sub_item[1] for sub_item in x[1] if start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
-                            count := sum(1 for sub_item in x[1] if start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
-                            total / count if count > 0 else (
-                                -float('inf') if data_request["button_state"] == "decrease" else float('inf')
-                            ))[2]
+                            (total := sum(sub_item[1] for sub_item in x[1] if
+                                          start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
+                             count := sum(
+                                 1 for sub_item in x[1] if start_date <= sub_item[0] <= end_date and sub_item[1] != 0),
+                             total / count if count > 0 else (
+                                 -float('inf') if data_request["button_state"] == "decrease" else float('inf')
+                             ))[2]
                         ),
                         reverse=data_request["button_state"] == "decrease"
                     )
                 elif data_request["metric_type"] == "K":
-                    grouped_data.sort( key=lambda x: (sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)), reverse=data_request["button_state"] == "decrease"),
+                    grouped_data.sort(
+                        key=lambda x: (sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                        reverse=data_request["button_state"] == "decrease"),
                 elif data_request["metric_type"] == "R":
-                    grouped_data.sort( key=lambda x: (sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)), reverse=data_request["button_state"] == "decrease"),
+                    grouped_data.sort(
+                        key=lambda x: (sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                        reverse=data_request["button_state"] == "decrease"),
                 elif data_request["metric_type"] == "C":
                     grouped_data.sort(
-                        key=lambda x:(
+                        key=lambda x: (
                             (clicks := (sum(sub_item[2] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
-                            immersions := (sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
-                            clicks / immersions if immersions > 0 else (
-                                -float('inf') if data_request["button_state"] == "decrease" else float('inf')
-                            ))[2]
+                             immersions := (
+                                 sum(sub_item[3] for sub_item in x[1] if start_date <= sub_item[0] <= end_date)),
+                             clicks / immersions if immersions > 0 else (
+                                 -float('inf') if data_request["button_state"] == "decrease" else float('inf')
+                             ))[2]
                         ),
                         reverse=data_request["button_state"] == "decrease"
-                    )   
-        
+                    )
+
     except TypeError as e:
         return JSONResponse({"data": []})
 
@@ -660,17 +697,15 @@ async def get_urls(
 
 @router.delete("/")
 async def delete_url(
-    request: Request,
-    days: int,
-    user: User = Depends(current_user),
+        request: Request,
+        days: int,
+        user: User = Depends(current_user),
 ):
-
     DATABASE_NAME = request.session["config"]["database_name"]
 
     session = await connect_db(DATABASE_NAME)
 
     async with session() as async_session:
-
         target_date = datetime.now() - timedelta(days=days)
 
         query = delete(Metrics).where(Metrics.date >= target_date)
@@ -684,4 +719,4 @@ async def delete_url(
     return {
         "status:": "success",
         "message": "delete data for None days",
-        }
+    }

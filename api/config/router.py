@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, RoleChecker
 from api.auth.models import GroupUserAssociation, User
 from api.config.models import Config, GroupConfigAssociation, List, ListURI, Role, Group
 from api.config.utils import get_config_info
@@ -73,16 +73,17 @@ async def add_config(request: Request,
 async def set_config(request: Request,
                      config_name: dict,
                      session: AsyncSession = Depends(get_db_general),
-                     user: User = Depends(current_user)):
+                     user: User = Depends(current_user),
+                     required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))):
     result = await get_config_info(session, config_name['config_name'], user.id)
     request.session["config"] = {
-                                "config_id": result.id,
-                                "database_name": result.database_name,
-                                 "access_token": result.access_token,
-                                 "user_id": result.user_id,
-                                 "host_id": result.host_id,
-                                }  
-    
+        "config_id": result.id,
+        "database_name": result.database_name,
+        "access_token": result.access_token,
+        "user_id": result.user_id,
+        "host_id": result.host_id,
+    }
+
     return {"status": 200, "details": request.session}
 
 
@@ -91,15 +92,16 @@ async def set_group(
         request: Request,
         group_name: Dict[str, str],
         session: AsyncSession = Depends(get_db_general),
-        user: User = Depends(current_user)
+        user: User = Depends(current_user),
+        required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
 ):
     # Получение group_id по имени группы
     result = await session.execute(select(Group.id).where(Group.name == group_name["group_name"]))
     group_id = result.scalars().first()
-    
+
     if group_id is None:
         raise HTTPException(status_code=404, detail="Group not found.")
-    
+
     # Получение первой конфигурации для группы
     config_association = (await session.execute(
         select(GroupConfigAssociation.config_id).where(GroupConfigAssociation.group_id == group_id).limit(1)
@@ -108,7 +110,7 @@ async def set_group(
     config_record = (await session.execute(select(Config).where(Config.id == config_association))).scalars().first()
 
     print(config_record)
-    
+
     # Установка значений конфигурации
     if config_record:
         request.session["group"] = {
@@ -135,7 +137,7 @@ async def set_group(
             "user_id": -1,
             "host_id": "",
         }
-    
+
     print(request.session)
     return {
         "status": 200,
@@ -272,7 +274,7 @@ async def delete_user_from_group(
                 )
             )
         )
-        
+
         group.users.remove(user)
         await session.commit()
         return {
@@ -285,11 +287,11 @@ async def delete_user_from_group(
 
 @router.put("/user/{id}")
 async def edit_user(
-    request: Request,
-    id: int,
-    formData: dict,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        id: int,
+        formData: dict,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
     email, password, role = formData.get('email'), formData.get('password'), int(formData.get('role'))
     user = (await session.execute(select(User).where(User.id == id))).scalars().first()
@@ -301,7 +303,7 @@ async def edit_user(
         user.hashed_password = password_helper.hash(password)
     if role:
         user.role = role
-    
+
     print(user.email, user.role)
 
     await session.commit()
@@ -314,10 +316,10 @@ async def edit_user(
 
 @router.delete("/user/{id}")
 async def delete_user(
-    request: Request,
-    id: int,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
     user = (await session.execute(select(User).where(User.id == id))).scalars().first()
 
@@ -333,9 +335,9 @@ async def delete_user(
 
 @router.get("/user_group/{user_id}")
 async def get_users_group(
-    user_id: int,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        user_id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
     print(user_id)
     # Получаем список групп для указанного user_id
@@ -355,18 +357,18 @@ async def get_users_group(
 
     return [{"id": group.id, "name": group.name} for group in groups_data]
 
+
 @router.delete("/user_group/{user_id}/{group_id}")
 async def delete_group_for_user(
-    request: Request,
-    user_id: int,
-    group_id: int,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        user_id: int,
+        group_id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
     group_obj = (await session.execute(select(
         GroupUserAssociation).where(
-            and_(GroupUserAssociation.group_id == group_id, GroupUserAssociation.user_id == user_id)))).scalars().first()
-    
+        and_(GroupUserAssociation.group_id == group_id, GroupUserAssociation.user_id == user_id)))).scalars().first()
 
     await session.delete(group_obj)
 
@@ -380,13 +382,13 @@ async def delete_group_for_user(
 
 @router.post("/user_group/{user_id}/{group_id}")
 async def add_group_for_user(
-    request: Request,
-    user_id: int,
-    group_id: int,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        user_id: int,
+        group_id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
-    session.add(GroupUserAssociation(user_id = user_id, group_id=group_id))
+    session.add(GroupUserAssociation(user_id=user_id, group_id=group_id))
 
     await session.commit()
 
@@ -394,7 +396,6 @@ async def add_group_for_user(
         "status": 200,
         "message": f"add group ID: {group_id} for user ID: {user_id}"
     }
-
 
 
 @router.post("/group")
@@ -438,13 +439,12 @@ async def add_group(
     return {"status": "success", "group": new_group.id}
 
 
-
 @router.delete("/group/{group_id}")
 async def delete_group(
-    request: Request,
-    group_id: int,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        group_id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
     group_obj = (await session.execute(select(Group).where(Group.id == group_id))).scalar()
 
@@ -458,13 +458,12 @@ async def delete_group(
     }
 
 
-
 @router.get("/group/{group_id}")
 async def get_groups_config(
-    request: Request,
-    group_id: int,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        group_id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
     # Получаем список групп для указанного user_id
     configs = await session.execute(
@@ -486,11 +485,11 @@ async def get_groups_config(
 
 @router.delete("/group_config/{group_id}/{config_id}")
 async def delete_config_from_group(
-    request: Request,
-    group_id: int,
-    config_id: int,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        group_id: int,
+        config_id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
     stmt = select(GroupConfigAssociation).where(
         and_(GroupConfigAssociation.group_id == group_id, GroupConfigAssociation.config_id == config_id))
@@ -508,13 +507,13 @@ async def delete_config_from_group(
 
 @router.post("/group_config/{group_id}/{config_id}")
 async def add_group_for_user(
-    request: Request,
-    group_id: int,
-    config_id: int,
-    user=Depends(current_user),
-    session: AsyncSession = Depends(get_db_general),
+        request: Request,
+        group_id: int,
+        config_id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
 ):
-    session.add(GroupConfigAssociation(group_id = group_id, config_id=config_id))
+    session.add(GroupConfigAssociation(group_id=group_id, config_id=config_id))
 
     await session.commit()
 
@@ -522,17 +521,3 @@ async def add_group_for_user(
         "status": 200,
         "message": f"add config ID: {config_id} for group ID: {group_id}"
     }
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
