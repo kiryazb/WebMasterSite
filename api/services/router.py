@@ -21,6 +21,7 @@ from api.auth.auth_config import current_user
 
 router = APIRouter()
 
+
 @router.get('/load-queries-script')
 async def load_queries_script(
         request: Request,
@@ -73,19 +74,21 @@ async def load_merge_script(
 
 @router.post('/load-live-search')
 async def load_live_search_list(
-    request: Request,
-    data: dict,
-    session: AsyncSession = Depends(get_db_general),
-    user: User = Depends(current_user),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+        request: Request,
+        data: dict,
+        session: AsyncSession = Depends(get_db_general),
+        user: User = Depends(current_user),
+        required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search"}))
 ):
     list_lr_id = int(data["list_lr_id"])
     print(list_lr_id)
-    list_lr = (await session.execute(select(ListLrSearchSystem).where(ListLrSearchSystem.id == list_lr_id))).scalars().first()
+    list_lr = (
+        await session.execute(select(ListLrSearchSystem).where(ListLrSearchSystem.id == list_lr_id))).scalars().first()
 
     list_id, lr, search_system = list_lr.list_id, list_lr.lr, list_lr.search_system
 
-    main_domain = (await session.execute(select(LiveSearchList.main_domain).where(LiveSearchList.id == list_id))).scalars().first()
+    main_domain = (
+        await session.execute(select(LiveSearchList.main_domain).where(LiveSearchList.id == list_id))).scalars().first()
 
     status = await live_search_main(list_lr_id, list_id, main_domain, lr, search_system, user, session)
 
@@ -95,7 +98,3 @@ async def load_live_search_list(
     return {
         "status": 200,
     }
-
-
-
-
