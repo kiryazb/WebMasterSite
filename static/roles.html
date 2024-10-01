@@ -187,13 +187,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <script>
+
+
     function updateRoleModules(role_id) {
         const form = document.getElementById(`modulesForm${role_id}`);
         const formData = new FormData(form);
         const url = `/config/roles/${role_id}/modules`;
         const jsonData = {};
-        formData.forEach((value, key) => {
-            jsonData[key] = value;
+
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach((checkbox) => {
+            jsonData[checkbox.name] = checkbox.checked; // добавляем в объект состояние чекбокса (true/false)
         });
         console.log(jsonData);
         fetch(url, {

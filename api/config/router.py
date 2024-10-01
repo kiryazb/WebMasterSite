@@ -220,10 +220,9 @@ async def update_role_modules(role_id: int, request: Request, session: AsyncSess
     
     
     for key, value in json_data.items():
-        with open('data_output.txt', 'w', encoding='utf-8') as f: f.write(str(key+" = "+value))        
-        setattr(role, key, value == "on") 
+        with open('data_output.txt', 'w', encoding='utf-8') as f: f.write(f'{key} = {value}')
+        setattr(role, key, value)
 
-    
     await session.commit()
     return {"message": "Role modules updated successfully"}
 
