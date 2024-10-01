@@ -20,11 +20,12 @@ class Config(Base):
     name = Column(String, nullable=False)
     database_name = Column(String, nullable=False)
     access_token = Column(String, nullable=False)
-    user_id = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
     host_id = Column(String, nullable=False)
 
     # Используем строку для связи с Group
     groups = relationship("Group", secondary='group_config_association', back_populates="configs")
+    user = relationship("User")
 
 
 class Role(Base):
