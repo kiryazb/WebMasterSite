@@ -217,12 +217,15 @@ async def update_role_modules(role_id: int, request: Request, session: AsyncSess
     role = result.scalars().first()
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
-    
-    
+
     for key, value in json_data.items():
         with open('data_output.txt', 'w', encoding='utf-8') as f: f.write(str(key+" = "+value))        
         setattr(role, key, value == "on") 
 
+    keys_of_role = list(filter(lambda item: item.startswith("access"), role.__dict__.keys()))
+    for key_of_role in keys_of_role:
+        if key_of_role not in json_data.keys():
+            setattr(role, key_of_role, False)
     
     await session.commit()
     return {"message": "Role modules updated successfully"}

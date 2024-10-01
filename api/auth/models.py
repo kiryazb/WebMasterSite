@@ -24,4 +24,6 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     role: int = Column(
         ForeignKey("roles.id"), nullable=False, default=1
     )
+
     groups = relationship("Group", secondary='group_user_association', back_populates="users")
+    role_entity = relationship("Role")
