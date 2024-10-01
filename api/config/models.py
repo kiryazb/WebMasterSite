@@ -17,16 +17,16 @@ class Config(Base):
     __tablename__ = "config"
 
     id = Column(Integer, autoincrement=True, primary_key=True)
+    id_author = Column(Integer, ForeignKey("user.id"), nullable=True)
     name = Column(String, nullable=False)
     database_name = Column(String, nullable=False)
     access_token = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+    user_id = Column(String, nullable=True)
     host_id = Column(String, nullable=False)
 
     # Используем строку для связи с Group
     groups = relationship("Group", secondary='group_config_association', back_populates="configs")
-    user = relationship("User")
-
+    user = relationship("User", primaryjoin="Config.id_author == User.id")
 
 class Role(Base):
     __tablename__ = "roles"

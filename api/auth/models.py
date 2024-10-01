@@ -1,5 +1,5 @@
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
-from sqlalchemy import Integer, String, ForeignKey, Column
+from sqlalchemy import Integer, String, ForeignKey, Column, BigInteger
 from sqlalchemy.orm import relationship
 
 from api.config.models import Base
@@ -13,7 +13,7 @@ class GroupUserAssociation(Base):
 
 
 class User(SQLAlchemyBaseUserTable[int], Base):
-    id: int = Column(Integer, primary_key=True)
+    id: int = Column(BigInteger, primary_key=True)
     email: str = Column(
             String(length=320), unique=True, index=True, nullable=False,
         )
