@@ -28,6 +28,8 @@
 <input type="button" value="Отфильтровать" onclick="UpdateTable();">
 <input type="button" value="Excel" onclick="generateExcel();">
 <input type="button" value="Csv" onclick="generateCsv();">
+
+{% if user.role_info.access_url_query_merge_full or  user.role_info.access_url_query_merge_view %}
 <table id="example" class="display nowrap" style="width:100%;">
 
     <thead>
@@ -45,6 +47,7 @@
     <button id="cur" disabled></button>
     <button id="next" onclick="NextPage()"></button>
 </div>
+{% endif %}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
 <script src="https://cdn.datatables.net/2.0.6/js/dataTables.js"></script>

@@ -1,7 +1,8 @@
 import logging
 import re
+from fastapi import Form
 from typing import Dict
-
+from datetime import datetime
 from alembic import command
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy import and_, delete, select
@@ -9,10 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth.auth_config import current_user
 from api.auth.models import GroupUserAssociation, User
-from api.config.models import Config, GroupConfigAssociation, List, ListURI, Role, Group
+from api.config.models import Config, GroupConfigAssociation, List, ListURI, Role, Group, UserQueryCount
 from api.config.utils import get_config_info
 from config import DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
 from db.session import get_db_general
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="static")
 
 from fastapi_users.password import PasswordHelper
 
@@ -146,16 +150,81 @@ async def set_group(
         }
     }
 
-
-@router.get("/role")
+@router.get("/roles")
 async def get_roles(
         request: Request,
         user=Depends(current_user),
         session: AsyncSession = Depends(get_db_general),
 ) -> dict:
-    query = select(Role.name)
-    result = (await session.execute(query)).scalars().all()  # Получаем все значения в виде списка строк
-    return {"roles": result}  # Возвращаем JSON объект с ключом "roles"
+    query = select(Role).order_by(Role.id)
+    result = (await session.execute(query)).scalars().all() 
+    return templates.TemplateResponse("roles.html", 
+                                    {"request": request, 
+                                    "user": user,
+                                    "roles": result,
+                                    })
+    #return {"roles": result}  # Возвращаем JSON объект с ключом "roles"
+
+@router.post("/roles/add")
+async def add_role(
+        request: Request,
+        formData: dict,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general
+)):
+    new_role = Role(name=formData['role_name'])
+    session.add(new_role)
+    await session.commit()
+    await session.refresh(new_role)
+    return {"status": "success", "new_role": new_role}
+
+@router.delete("/roles/{role_id}")
+async def delete_role(role_id: int, session: AsyncSession = Depends(get_db_general)):
+    query = select(Role).where(Role.id == role_id)
+    result = await session.execute(query)
+    role = result.scalars().first()
+
+    if role:
+        await session.delete(role)
+        await session.commit()
+        return {"status": 200, "message": "Role deleted successfully"}
+    raise HTTPException(status_code=404, detail="Role not found")
+
+@router.put("/roles/{role_id}/edit")
+async def edit_role(role_id: int, request: Request, session: AsyncSession = Depends(get_db_general)):
+    # Extracting JSON body data
+    body = await request.json()
+    edit_role_name = body.get("edit_role_name")
+
+    # Query to get the role
+    query = select(Role).where(Role.id == role_id)
+    result = await session.execute(query)
+    role = result.scalars().first()
+
+    if role:
+        role.name = edit_role_name  # Update role name
+        await session.commit()
+        return {"status": 200, "message": "Role updated successfully"}
+    
+    raise HTTPException(status_code=404, detail="Role not found")
+
+@router.post("/roles/{role_id}/modules")
+async def update_role_modules(role_id: int, request: Request, session: AsyncSession = Depends(get_db_general)):
+    json_data = await request.json()
+    with open('data_output.txt', 'w', encoding='utf-8') as f: f.write(str(json_data)) 
+    query = select(Role).where(Role.id == role_id)
+    result = await session.execute(query)
+    role = result.scalars().first()
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    
+    
+    for key, value in json_data.items():
+        with open('data_output.txt', 'w', encoding='utf-8') as f: f.write(f'{key} = {value}')
+        setattr(role, key, value)
+
+    await session.commit()
+    return {"message": "Role modules updated successfully"}
 
 
 @router.get("/username")
@@ -291,8 +360,16 @@ async def edit_user(
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
 ):
-    email, password, role = formData.get('email'), formData.get('password'), int(formData.get('role'))
+    email, password, role, username, is_active, query_count = (
+        formData.get('email'), 
+        formData.get('password'),
+        int(formData.get('role')), 
+        formData.get('username'), 
+        formData.get('is_active'), 
+        formData.get('query_count'))
     user = (await session.execute(select(User).where(User.id == id))).scalars().first()
+    user_query_count = (await session.execute(select(UserQueryCount).where(UserQueryCount.user_id == id))).scalars().first()
+
 
     if email:
         user.email = email
@@ -301,8 +378,21 @@ async def edit_user(
         user.hashed_password = password_helper.hash(password)
     if role:
         user.role = role
-    
-    print(user.email, user.role)
+    if username:
+        user.username = username
+    user.is_active = is_active
+    #if is_active:
+    if not query_count:
+        query_count = 0
+    if user_query_count:
+        user_query_count.query_count = query_count
+    else:
+        user_query_count = UserQueryCount(
+            user_id=user.id,
+            query_count=query_count, 
+            last_update_date=datetime.now()
+    )
+    session.add(user_query_count)
 
     await session.commit()
 
@@ -521,6 +611,63 @@ async def add_group_for_user(
     return {
         "status": 200,
         "message": f"add config ID: {config_id} for group ID: {group_id}"
+    }
+
+# ----------------
+@router.put("/config/{id}")
+async def edit_config(
+        request: Request,
+        id: int,
+        formData: dict,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
+):
+    # email, password, role = formData.get('email'), formData.get('password'), int(formData.get('role'))
+    name, database_name, access_token, user_id, host_id = formData.get('name'), formData.get('databaseName'),\
+                                                          formData.get('accessToken'), formData.get('userID'), formData.get('hostID'),
+
+    config = (await session.execute(select(Config).where(Config.id == id))).scalars().first()
+
+    if name:
+        config.name = name
+    if database_name:
+        config.database_name = database_name
+    if access_token:
+        config.access_token = access_token
+    if user_id:
+        config.user_id = user_id
+    if host_id:
+        config.host_id = host_id
+
+    print(config.name)
+
+    await session.commit()
+
+    return {
+        "status": 200,
+        "message": f"Updated config with id: {id}",
+    }
+
+
+@router.delete("/config/{config_id}")
+async def delete_config(
+        request: Request,
+        config_id: int,
+        user=Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
+):
+    stmt = select(Config).where(Config.id==config_id)
+    config_obj = (await session.execute(stmt)).scalar()
+
+    if not config_obj:
+        raise HTTPException(status_code=404, detail="Config not found")
+
+    await session.delete(config_obj)
+    await session.commit()
+
+    return {
+        "status": 200,
+        "message": f"delete config ID: {config_id}"
     }
 
 

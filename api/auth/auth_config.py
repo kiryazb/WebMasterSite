@@ -56,3 +56,44 @@ class RoleChecker:
                 detail='not enough permissions'
             )
         return True
+
+
+class PermissionRoleChecker:
+
+    def __init__(self, required_permissions: set[str]) -> None:
+        self.required_permissions = required_permissions
+
+    async def __call__(
+            self,
+            user: User = Depends(current_user),
+            session: AsyncSession = Depends(get_db_general),
+    ) -> bool:
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Not authenticated'
+            )
+
+        # Извлекаем роль пользователя
+        user_role = (await session.execute(
+            select(Role).where(Role.id == user.role)
+        )).fetchone()
+
+        if not user_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Role not found'
+            )
+
+        role = user_role[0]
+
+        # Проверяем, что хотя бы одно разрешение из required_permissions установлено в True
+        has_permission = any(getattr(role, perm, False) for perm in self.required_permissions)
+
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Not enough permissions'
+            )
+
+        return True

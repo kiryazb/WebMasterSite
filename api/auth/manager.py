@@ -1,5 +1,13 @@
 from datetime import datetime
-from typing import Optional
+from email_validator import validate_email
+from email_validator.exceptions_types import EmailSyntaxError, EmailNotValidError
+from typing import Optional, Iterable
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
+
+from .exceptions import InvalidEmail
 
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordRequestForm
@@ -23,6 +31,54 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = SECRET
 
     verification_token_secret = SECRET
+
+    async def get(self, user_id: int) -> Optional[User]:
+        """
+        Get a user by id.
+
+        :param id: Id. of the user to retrieve.
+        :raises UserNotExists: The user does not exist.
+        :return: A user.
+        """
+        async with async_session_general() as session:
+            result = await session.execute(
+                select(User).options(selectinload(User.role_info)).filter(User.id == user_id)
+            )
+            user = result.scalars().first()
+
+        if user is None:
+            raise exceptions.UserNotExists()
+
+        return user
+
+    async def batch_create(self, users_create: Iterable[UserCreate], safe: bool = False):
+        """
+        Create users in db.
+        :raises InvalidEmail
+        :raises IntegrityError: when user with the same data already exists
+        """
+        users_dicts = []
+        for user_create in users_create:
+            try:
+                user_create.email = validate_email(user_create.email).email 
+                user_dict = (
+                    user_create.create_update_dict()
+                    if safe
+                    else user_create.create_update_dict_superuser()
+                )
+                password = user_dict.pop("password")
+                user_dict["hashed_password"] = self.password_helper.hash(password)
+                users_dicts.append(user_dict)
+            except (EmailSyntaxError, EmailNotValidError):
+                raise InvalidEmail(invalid_email=user_create.email)
+
+        async with async_session_general() as session:
+            try:
+                await session.run_sync(lambda session: session.bulk_insert_mappings(User, users_dicts))
+                await session.commit() 
+            except IntegrityError as e:
+                await session.rollback()
+                raise e
 
     async def create(
             self,
@@ -49,6 +105,7 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
         if existing_user is not None:
             raise exceptions.UserAlreadyExists()
 
+        safe = False
         user_dict = (
             user_create.create_update_dict()
             if safe
@@ -96,7 +153,6 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
             user: User,
             request: Optional[Request] = None,
             ):
-        
         async with async_session_general() as session:
             session.add(UserQueryCount(
                 user_id=user.id,

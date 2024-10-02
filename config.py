@@ -4,11 +4,15 @@ import os
 
 load_dotenv()
 
+APP_PORT = os.environ.get("APP_PORT")
 DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_HOST =os.environ.get( "DB_HOST")
 DB_PORT = os.environ.get("DB_PORT")
 SECRET = os.environ.get("SECRET")
+
+
+MONTHLY_REQUEST_LIMIT = os.environ.get("MONTHLY_REQUEST_LIMIT")
 
 DATABASE_GENERAL_NAME = os.environ.get("DATABASE_GENERAL_NAME")
 

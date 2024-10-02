@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from sqlalchemy import select
 
-from api.auth.auth_config import RoleChecker
+from api.auth.auth_config import RoleChecker, PermissionRoleChecker
 from api.auth.models import User
 from api.config.models import ListLrSearchSystem, LiveSearchList, YandexLr
 from db.session import get_db_general
@@ -24,7 +24,8 @@ router = APIRouter()
 @router.get('/load-queries-script')
 async def load_queries_script(
         request: Request,
-        required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+        required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"})),
+        required_permission: bool = Depends(PermissionRoleChecker({"access_queries_full", "access_queries_update"}))
 ):
     request_session = request.session
     res = await get_all_data_queries(request_session)
@@ -77,7 +78,7 @@ async def load_live_search_list(
     data: dict,
     session: AsyncSession = Depends(get_db_general),
     user: User = Depends(current_user),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search"}))
 ):
     list_lr_id = int(data["list_lr_id"])
     print(list_lr_id)

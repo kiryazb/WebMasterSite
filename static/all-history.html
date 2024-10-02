@@ -17,10 +17,14 @@
 <input type="date" id="start_date">
 <input type="date" id="end_date">
 <input type="button" value="Отфильтровать" onclick="UpdateTable();">
+{% if user.role_info.access_history_full or user.role_info.access_history_export %}
 <input type="button" value="Excel" onclick="generateExcel();">
 <input type="button" value="Excel Top" onclick="generateExcelTop();">
 <input type="button" value="Csv" onclick="generateCsv();">
 <input type="button" value="Csv Top" onclick="generateCsvTop();">
+{% endif %}
+
+{% if user.role_info.access_history_full or user.role_info.access_history_view %}
 <table id="example" class="display nowrap" style="width:100%;">
 
     <thead>
@@ -34,6 +38,7 @@
     </tbody>
 
 </table>
+{% endif %}
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
