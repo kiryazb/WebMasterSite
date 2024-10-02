@@ -15,19 +15,21 @@
     <input type="button" value="Update Data Merge" onclick="sendRequest('{{ url_for('load_merge_script') }}')">
     <label for="last_update_date">Last Update Date: {{ last_update_date }}</label>
 </div>
-<input type="date" id="start_date">
-<input type="date" id="end_date">
-<label for="search_field_url">Url:</label>
-<input type="text" id="search_field_url" style="width: 250px">
-<label for="search_field_query">Query:</label>
-<input type="text" id="search_field_query" style="width: 250px">
-<label for="input_sort">Отсортировать?</label>
-<input type="checkbox" id="input_sort">
-<label for="input_desc">По убыванию?</label>
-<input type="checkbox" id="input_desc">
-<input type="button" value="Отфильтровать" onclick="UpdateTable();">
-<input type="button" value="Excel" onclick="generateExcel();">
-<input type="button" value="Csv" onclick="generateCsv();">
+{% if user.role_info.access_url_query_merge_view or user.role_info.access_url_query_merge_full %}
+    <input type="date" id="start_date">
+    <input type="date" id="end_date">
+    <label for="search_field_url">Url:</label>
+    <input type="text" id="search_field_url" style="width: 250px">
+    <label for="search_field_query">Query:</label>
+    <input type="text" id="search_field_query" style="width: 250px">
+    <label for="input_sort">Отсортировать?</label>
+    <input type="checkbox" id="input_sort">
+    <label for="input_desc">По убыванию?</label>
+    <input type="checkbox" id="input_desc">
+    <input type="button" value="Отфильтровать" onclick="UpdateTable();">
+    <input type="button" value="Excel" onclick="generateExcel();">
+    <input type="button" value="Csv" onclick="generateCsv();">
+{% endif %}
 
 {% if user.role_info.access_url_query_merge_full or  user.role_info.access_url_query_merge_view %}
 <table id="example" class="display nowrap" style="width:100%;">

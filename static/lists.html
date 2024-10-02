@@ -80,6 +80,7 @@
 
 <div class="container">
     <!-- Новый блок для добавления списка -->
+    {% if user.role_info.access_list_panel_create or user.role_info.access_list_panel_full%}
     <div class="add-list-container">
         <h2>Add New List</h2>
         <form class="add-list-form" id="add-list-form">
@@ -88,12 +89,16 @@
             <input type="text" id="config-name" placeholder="Config Name" required>
             <textarea id="list-content" placeholder="Enter URLs here (one per line)" rows="6" required></textarea>
             <div class="checkbox-container">
+                <!-- Public Checkbox (Visible if Share Permission is granted) -->
+                {% if user.role_info.access_list_panel_share or user.role_info.access_list_panel_full %}
                 <input type="checkbox" id="make-public">
                 <label for="make-public">Make list public?</label>
+                {% endif %}
             </div>
             <button type="button" onclick="addList()">Add List</button>
         </form>
     </div>
+    {% endif %}
 
     <!-- Таблица списков -->
     <div class="row header">
@@ -109,19 +114,28 @@
     <div class="row">
         <div class="cell">{{ loop.index }}</div>
         <div class="cell">
-            <a href="{{ url_for('get_urls').include_query_params(list_name = name.name) }}">{{ name.name }}</a>
+            {% if name.is_public or user.role_info.access_list_panel_full %}
+            <a href="{{ url_for('get_urls').include_query_params(list_name=name.name) }}">{{ name.name }}</a>
+            {% endif %}
         </div>
         <div class="cell">{{ name_dict[name.author] }}</div>
         <div class="cell">{{ group_dict[name.group] }}</div>
         <div class="cell">{{ config_dict[name.config] }}</div>
         <div class="cell">
+            {% if user.role_info.access_list_panel_share %}
             <input type="checkbox" id="public-{{ loop.index }}"
                    {% if name.is_public %}checked{% endif %}
                    onchange="togglePublic('{{ name.name }}', this.checked)">
+            {% endif %}
         </div>
         <div class="cell">
-            <button type="button" onclick="editList('{{ url_for('show_edit_list', list_id=name.id) }}')">Edit</button>
-            <button type="button" onclick="deleteList('{{ name.name }}')">Удалить</button>
+            {% if user.role_info.access_list_panel_edit or user.role_info.access_list_panel_full %}
+                <button type="button" onclick="editList('{{ url_for('show_edit_list', list_id=name.id) }}')">Edit</button>
+            {% endif %}
+            <!-- Delete Button (Visible if Full Permission is granted) -->
+            {% if user.role_info.access_list_panel_full %}
+                <button type="button" onclick="deleteList('{{ name.name }}')">Удалить</button>
+            {% endif %}
         </div>
     </div>
     {% endfor %}

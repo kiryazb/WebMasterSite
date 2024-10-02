@@ -27,21 +27,21 @@
     <input type="date" id="start_date">
     <input type="date" id="end_date">
     {% if user.role_info.access_url_full or  user.role_info.access_url_filter%}
-    <input type="text" id="search_field" style="width: 250px">
-    <label for="input_sort">Отсортировать?</label>
-    <input type="checkbox" id="input_sort">
-    <label for="input_desc">По убыванию?</label>
-    <input type="checkbox" id="input_desc">
-    <input type="button" value="Отфильтровать" onclick="UpdateTable();">
+        <input type="text" id="search_field" style="width: 250px">
+        <label for="input_sort">Отсортировать?</label>
+        <input type="checkbox" id="input_sort">
+        <label for="input_desc">По убыванию?</label>
+        <input type="checkbox" id="input_desc">
+        <input type="button" value="Отфильтровать" onclick="UpdateTable();">
     {% endif %}
 
     {% if user.role_info.access_url_full or  user.role_info.access_url_export%}
-    <input type="button" value="Excel" onclick="generateExcel('{{ url_for('generate_excel_url')}}');">
-    <input type="button" value="Csv" onclick="generateCsv('{{ url_for('generate_csv_url')}}');">
+        <input type="button" value="Excel" onclick="generateExcel('{{ url_for('generate_excel_url')}}');">
+        <input type="button" value="Csv" onclick="generateCsv('{{ url_for('generate_csv_url')}}');">
     {% endif %}
 
     {% if user.role_info.access_url_full or  user.role_info.access_url_sum%}
-    <input type="button" value="Вычислить суммы" onclick="getTotalSum('{{ url_for('get_total_sum_urls')}}');">
+        <input type="button" value="Вычислить суммы" onclick="getTotalSum('{{ url_for('get_total_sum_urls')}}');">
     {% endif %}
 
     <table id="example" class="display nowrap" style="width:100%;">

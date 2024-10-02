@@ -20,25 +20,30 @@
 
         <input type="button" value="Update Data Live Search" onclick="sendRequest('{{ url_for('load_live_search_list') }}', '{{ lr_id }}')">
 
-        <select id="searchEngineSelect" onchange="redirectToEngine()">
-            <option value="">Select Search Engine</option>
-            <option value="{{ url_for('get_live_search').include_query_params(list_id=list_id, search_system='Yandex', lr_id=-1) }}" {{'selected' if search_system=='Yandex' else '' }}>Yandex</option>
-            <option value="{{ url_for('get_live_search').include_query_params(list_id=list_id, search_system='Google', lr_id=-1) }}" {{ 'selected' if search_system == 'Google' else '' }} >Google</option>
-        </select>
+        {% if user.role_info.access_live_search_use or user.role_info.access_live_search_full %}
+            <select id="searchEngineSelect" onchange="redirectToEngine()">
+                <option value="">Select Search Engine</option>
+                <option value="{{ url_for('get_live_search').include_query_params(list_id=list_id, search_system='Yandex', lr_id=-1) }}" {{'selected' if search_system=='Yandex' else '' }}>Yandex</option>
+                <option value="{{ url_for('get_live_search').include_query_params(list_id=list_id, search_system='Google', lr_id=-1) }}" {{ 'selected' if search_system == 'Google' else '' }} >Google</option>
+            </select>
 
-        <!-- Dropdown for selecting region -->
-        <select id="regionSelect" onchange="updateRegion()">
-            <option value="">Select Region</option>
-            {% for region in region_list %}
-                <option value="{{ url_for('get_live_search').include_query_params(list_id=list_id, search_system=search_system, lr_id=region.id) }}" }}>{{ region_dict[region.lr] }}</option>
-            {% endfor %}
-        </select>
+            <!-- Dropdown for selecting region -->
+            <select id="regionSelect" onchange="updateRegion()">
+                <option value="">Select Region</option>
+                {% for region in region_list %}
+                    <option value="{{ url_for('get_live_search').include_query_params(list_id=list_id, search_system=search_system, lr_id=region.id) }}" }}>{{ region_dict[region.lr] }}</option>
+                {% endfor %}
+            </select>
 
-        <span>Запросов осталось: {{ query_count }}</span>
-        <button onclick="updateQueryCount()">Обновить</button>
+            <span>Запросов осталось: {{ query_count }}</span>
+            {% if user.role_info.access_live_search_full %}
+                <button onclick="updateQueryCount()">Обновить</button>
+            {% endif %}
+        {% endif %}
     </div>
 
     <!-- Existing filters and buttons -->
+    {% if user.role_info.access_live_search_use or user.role_info.access_live_search_full %}
     <input type="date" id="start_date">
     <input type="date" id="end_date">
     <input type="text" id="search_field" style="width: 250px">
@@ -64,6 +69,7 @@
         <button id="cur" disabled>Current</button>
         <button id="next" onclick="NextPage()">Next</button>
     </div>
+    {% endif %}
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdn.datatables.net/2.0.6/js/dataTables.js"></script>

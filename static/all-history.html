@@ -10,7 +10,9 @@
 
 <div class="button-container">
     <a href="{{ url_for('show_profile', username=user.username) }}" class="back-to-menu">Back to profile</a>
-    <input type="button" value="Update Data History" onclick="sendRequest('{{ url_for('load_history_script') }}')">
+    {% if user.role_info.access_history_full %}
+        <input type="button" value="Update Data History" onclick="sendRequest('{{ url_for('load_history_script') }}')">
+    {% endif %}
     <label for="last_update_date">Last Update Date: {{ last_update_date }}</label>
 </div>
 
@@ -18,10 +20,10 @@
 <input type="date" id="end_date">
 <input type="button" value="Отфильтровать" onclick="UpdateTable();">
 {% if user.role_info.access_history_full or user.role_info.access_history_export %}
-<input type="button" value="Excel" onclick="generateExcel();">
-<input type="button" value="Excel Top" onclick="generateExcelTop();">
-<input type="button" value="Csv" onclick="generateCsv();">
-<input type="button" value="Csv Top" onclick="generateCsvTop();">
+    <input type="button" value="Excel" onclick="generateExcel();">
+    <input type="button" value="Excel Top" onclick="generateExcelTop();">
+    <input type="button" value="Csv" onclick="generateCsv();">
+    <input type="button" value="Csv Top" onclick="generateCsvTop();">
 {% endif %}
 
 {% if user.role_info.access_history_full or user.role_info.access_history_view %}

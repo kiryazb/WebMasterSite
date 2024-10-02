@@ -23,17 +23,35 @@
                         {% if user.role_info.access_queries %}
                             <a href="{{ url_for('get_queries') }}">Query Table</a>
                         {% endif %}
-                        <a href="{{ url_for('get_urls')}}">Url Table</a>
-                        <a href="{{ url_for('get_history') }}">All history Table</a>
-                        <a href="{{ url_for('show_menu_merge_page') }}">Query & Url Merge Table</a>
-                        <a href="{{ url_for('show_list', username=user.username) }}">List Panel</a>
+                        {% if user.role_info.access_url %}
+                            <a href="{{ url_for('get_urls') }}">Url Table</a>
+                        {% endif %}
+                        {% if user.role_info.access_history %}
+                            <a href="{{ url_for('get_history') }}">All history Table</a>
+                        {% endif %}
+                        {% if user.role_info.access_url_query_merge %}
+                            <a href="{{ url_for('show_menu_merge_page') }}">Query & Url Merge Table</a>
+                        {% endif %}
+                        {% if user.role_info.access_list_panel %}
+                            <a href="{{ url_for('show_list', username=user.username) }}">List Panel</a>
+                        {% endif %}
                     </div>
                 </div>
-                <button class="button superuser-button" onclick="superuser_button('{{ url_for('show_superuser', username=user.username) }}')">Command Panel</button>
-                <button class="button superuser-button" onclick="superuser_button('{{ url_for('show_live_search', username=user.username) }}')">Live Search List Panel</button>
-                <button class="button superuser-button" onclick="superuser_button('{{ url_for('show_user_menu') }}')">User Menu</button>
-                <button class="button superuser-button" onclick="superuser_button('{{ url_for('show_group_menu') }}')">Group Menu</button>
-                <button class="button superuser-button" onclick="superuser_button('{{ url_for('get_roles') }}')">Role Menu</button>
+                {% if user.role_info.access_command_panel %}
+                    <button class="button superuser-button" onclick="superuser_button('{{ url_for('show_superuser', username=user.username) }}')">Command Panel</button>
+                {% endif %}
+                {% if user.role_info.access_live_search %}
+                    <button class="button superuser-button" onclick="superuser_button('{{ url_for('show_live_search', username=user.username) }}')">Live Search List Panel</button>
+                {% endif %}
+                {% if user.role_info.access_user_menu %}
+                    <button class="button superuser-button" onclick="superuser_button('{{ url_for('show_user_menu') }}')">User Menu</button>
+                {% endif %}
+                {% if user.role_info.access_group_menu %}
+                    <button class="button superuser-button" onclick="superuser_button('{{ url_for('show_group_menu') }}')">Group Menu</button>
+                {% endif %}
+                {% if user.role == 3 %}
+                    <button class="button superuser-button" onclick="superuser_button('{{ url_for('get_roles') }}')">Role Menu</button>
+                {% endif %}
                 <button class="button main-page-button" onclick="main_page_button()">Main Page</button>
                 <div class="header-right">
                     <div class="dropdown">
