@@ -15,7 +15,7 @@ from openpyxl import Workbook
 from api.actions.query_url_merge import _get_merge_query, _get_merge_with_pagination, _get_merge_with_pagination_and_like, _get_merge_with_pagination_and_like_sort, _get_merge_with_pagination_sort
 from api.auth.models import User
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, PermissionRoleChecker
 from api.config.utils import get_config_names, get_group_names
 from db.models import QueryUrlsMergeLogs
 from db.session import connect_db, get_db_general
@@ -40,9 +40,12 @@ templates = Jinja2Templates(directory="static")
 router = APIRouter()
 
 @router.get("/menu/merge_database/")
-async def show_menu_merge_page(request: Request,
-                               user: User = Depends(current_user),
-                               session: AsyncSession = Depends(get_db_general)):
+async def show_menu_merge_page(
+        request: Request,
+       user: User = Depends(current_user),
+        session: AsyncSession = Depends(get_db_general),
+        required: bool = Depends(PermissionRoleChecker({"access_url_query_merge"})),
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -61,10 +64,13 @@ async def show_menu_merge_page(request: Request,
 
 
 @router.get("/")
-async def get_merge(request: Request,
-                         user: User = Depends(current_user),
-                         session: AsyncSession = Depends(get_db_general)
-                         ):
+async def get_merge(
+    request: Request,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_url_query_merge"})),
+
+):
     date = request.query_params.get("date")
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]

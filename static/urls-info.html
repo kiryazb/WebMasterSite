@@ -12,7 +12,7 @@
 <body>
     <div class="button-container">
         <a href="{{ url_for('show_profile', username=user.username) }}" class="back-to-menu">Back to profile</a>
-        {% if not list_name %}
+        {% if not list_name and (user.role_info.access_url_full or user.role_info.access_url_update) %}
             <input type="button" value="Update Data Url" onclick="sendRequest('{{ url_for('load_urls_script') }}')">
         {% endif %}
         <label for="last_update_date">Last Update Date: {{ last_update_date }}</label>
@@ -26,16 +26,24 @@
     <!-- Existing filters and buttons -->
     <input type="date" id="start_date">
     <input type="date" id="end_date">
+    {% if user.role_info.access_url_full or  user.role_info.access_url_filter%}
     <input type="text" id="search_field" style="width: 250px">
     <label for="input_sort">Отсортировать?</label>
     <input type="checkbox" id="input_sort">
     <label for="input_desc">По убыванию?</label>
     <input type="checkbox" id="input_desc">
     <input type="button" value="Отфильтровать" onclick="UpdateTable();">
+    {% endif %}
+
+    {% if user.role_info.access_url_full or  user.role_info.access_url_export%}
     <input type="button" value="Excel" onclick="generateExcel('{{ url_for('generate_excel_url')}}');">
     <input type="button" value="Csv" onclick="generateCsv('{{ url_for('generate_csv_url')}}');">
+    {% endif %}
+
+    {% if user.role_info.access_url_full or  user.role_info.access_url_sum%}
     <input type="button" value="Вычислить суммы" onclick="getTotalSum('{{ url_for('get_total_sum_urls')}}');">
-    
+    {% endif %}
+
     <table id="example" class="display nowrap" style="width:100%;">
         <thead id="thead_t">
             <tr id="head_t">
@@ -434,20 +442,20 @@
         state = "decrease";
         metric_type = "R";
 
-        prev_start_date = document.getElementById('start_date').value;
-        prev_end_date = document.getElementById('end_date').value;
-        prev_search_text = document.getElementById("search_field").value;
+        prev_start_date = document.getElementById('start_date') ? document.getElementById('start_date').value : null;
+        prev_end_date = document.getElementById('end_date') ? document.getElementById('end_date').value : null;
+        prev_search_text = document.getElementById("search_field") ? document.getElementById("search_field").value : "";
 
         var url = "{{ url_for('get_urls') }}";
         var params = {
             length: 50, // количество отображаемых элементов
             start: 0, // номер страницы
-            start_date: document.getElementById('start_date').value, // Дата начала поиска
-            end_date: document.getElementById('end_date').value, // Дата окончания поиска
+            start_date: document.getElementById('start_date') ? document.getElementById('start_date').value : null, // Дата начала поиска
+            end_date: document.getElementById('end_date') ? document.getElementById('end_date').value : null, // Дата окончания поиска
             amount: calculateDays(),
-            search_text: document.getElementById("search_field").value,
-            sort_result: document.getElementById("input_sort").checked,
-            sort_desc: document.getElementById("input_desc").checked,
+            search_text: document.getElementById('search_field') ? document.getElementById("search_field").value : "",
+            sort_result: document.getElementById('input_sort') ? document.getElementById("input_sort").checked : false,
+            sort_desc: document.getElementById('input_desc') ? document.getElementById("input_desc").checked : false,
             button_date: global_date,
             button_state: state,
             metric_type: metric_type,

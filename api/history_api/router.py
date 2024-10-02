@@ -17,7 +17,7 @@ from api.actions.indicators import _get_indicators_from_db, _get_top_query, _get
 from api.actions.utils import get_day_of_week
 from api.auth.models import User
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, PermissionRoleChecker
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,8 +43,9 @@ router = APIRouter()
 async def get_history(
         request: Request,
         user: User = Depends(current_user),
-        session: AsyncSession = Depends(get_db_general)
-        ):
+        session: AsyncSession = Depends(get_db_general),
+        required: bool = Depends(PermissionRoleChecker({"access_history"}))
+):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
 
@@ -69,7 +70,8 @@ async def get_history(
 @router.post("/")
 async def get_history(
         request: Request, data_request: dict,
-        user: User = Depends(current_user)
+        user: User = Depends(current_user),
+        required: bool = Depends(PermissionRoleChecker({"access_history_full", "access_history_view"}))
 ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
@@ -210,7 +212,12 @@ async def get_history(
 
 
 @router.post("/generate_excel_history")
-async def generate_excel_history(request: Request, data_request: dict, user: User = Depends(current_user)):
+async def generate_excel_history(
+        request: Request,
+        data_request: dict,
+        user: User = Depends(current_user),
+        required: bool = Depends(PermissionRoleChecker({"access_history_full", "access_history_export"}))
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -284,7 +291,12 @@ async def generate_excel_history(request: Request, data_request: dict, user: Use
 
 
 @router.post("/generate_excel_top")
-async def generate_excel_top(request: Request, data_request: dict, user: User = Depends(current_user)):
+async def generate_excel_top(
+        request: Request,
+        data_request: dict,
+        user: User = Depends(current_user),
+        required: bool = Depends(PermissionRoleChecker({"access_history_full", "access_history_export"}))
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -378,7 +390,12 @@ async def generate_excel_top(request: Request, data_request: dict, user: User = 
 
 
 @router.post("/generate_csv_history/")
-async def generate_csv_history(request: Request, data_request: dict, user: User = Depends(current_user)):
+async def generate_csv_history(
+        request: Request,
+        data_request: dict,
+        user: User = Depends(current_user),
+        required: bool = Depends(PermissionRoleChecker({"access_history_full", "access_history_export"}))
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -449,7 +466,12 @@ async def generate_csv_history(request: Request, data_request: dict, user: User 
 
 
 @router.post("/generate_csv_top")
-async def generate_csv_top(request: Request, data_request: dict, user: User = Depends(current_user)):
+async def generate_csv_top(
+        request: Request,
+        data_request: dict,
+        user: User = Depends(current_user),
+        required: bool = Depends(PermissionRoleChecker({"access_history_full", "access_history_export"}))
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
