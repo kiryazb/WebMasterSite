@@ -13,7 +13,7 @@ from db.session import get_db_general
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, PermissionRoleChecker
 
 from const import date_format_2, date_format, query_value
 
@@ -30,7 +30,8 @@ async def get_live_search(
     search_system: str = Query(None),
     lr_id: int = Query(None),
     user: User = Depends(current_user),
-    session: AsyncSession = Depends(get_db_general)
+    session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_live_search"})),
 ):  
     if lr_id == -1:
         lr_id = (await session.execute(select(ListLrSearchSystem.id).where(and_(ListLrSearchSystem.list_id == list_id, ListLrSearchSystem.search_system == search_system)))).scalars().first()

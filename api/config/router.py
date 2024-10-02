@@ -150,11 +150,14 @@ async def set_group(
         }
     }
 
+from api.auth.auth_config import PermissionRoleChecker, RoleChecker
+
 @router.get("/roles")
 async def get_roles(
         request: Request,
         user=Depends(current_user),
         session: AsyncSession = Depends(get_db_general),
+        required: bool = Depends(RoleChecker(required_permissions={"Superuser"})),
 ) -> dict:
     query = select(Role).order_by(Role.id)
     result = (await session.execute(query)).scalars().all() 
