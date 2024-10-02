@@ -17,7 +17,7 @@ from api.actions.actions import get_last_date, get_last_load_date
 from api.actions.urls import _get_urls_with_pagination, _get_urls_with_pagination_and_like, _get_urls_with_pagination_and_like_sort, _get_urls_with_pagination_sort, _get_metrics_daily_summary, _get_metrics_daily_summary_like, _get_not_void_count_daily_summary, _get_not_void_count_daily_summary_like
 from api.auth.models import User
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, PermissionRoleChecker
 from api.config.models import List
 from api.config.utils import get_config_names, get_group_names
 from db.models import Metrics
@@ -47,6 +47,7 @@ async def generate_excel_url(
     data_request: dict, 
     user: User = Depends(current_user),
     general_session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_url_full", "access_url_export"})),
 ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
@@ -242,6 +243,7 @@ async def generate_csv_url(
     data_request: dict, 
     user: User = Depends(current_user),
     general_session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_url_full", "access_url_export"})),
     ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
@@ -433,10 +435,13 @@ async def generate_csv_url(
 
 
 @router.get("/")
-async def get_urls(request: Request,
-                   list_name: str = Query(None),
-                   user: User = Depends(current_user),
-                   session: AsyncSession = Depends(get_db_general)):
+async def get_urls(
+    request: Request,
+    list_name: str = Query(None),
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_url"})),
+):
 
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -469,8 +474,8 @@ async def get_urls(
     request: Request, 
     data_request: dict, 
     user: User = Depends(current_user),
-    general_session: AsyncSession = Depends(get_db_general)
-    ):
+    general_session: AsyncSession = Depends(get_db_general),
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -661,7 +666,8 @@ async def get_total_sum_urls(
     request: Request, 
     data_request: dict, 
     user: User = Depends(current_user),
-    general_session: AsyncSession = Depends(get_db_general)
+    general_session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_url_full", "access_url_sum"})),
     ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')

@@ -5,7 +5,7 @@ from cmath import inf
 from itertools import groupby
 import logging
 import sys
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -20,7 +20,7 @@ from db.session import connect_db, get_db_general
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.auth_config import current_user
+from api.auth.auth_config import current_user, RoleChecker, PermissionRoleChecker
 
 from const import date_format_2, date_format_out
 
@@ -37,10 +37,13 @@ templates = Jinja2Templates(directory="static")
 router = APIRouter()
 
 @router.get("/")
-async def get_queries(request: Request, 
-                      user: User = Depends(current_user),
-                      session: AsyncSession = Depends(get_db_general)
-                      ):
+async def get_queries(
+    request: Request,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_queries_full", "access_queries_view"})),
+):
+
     group_name = request.session["group"].get("name", "")
 
     DATABASE_NAME = request.session['config'].get('database_name', "")
@@ -70,8 +73,9 @@ async def get_queries(request: Request,
 async def get_queries(
     request: Request, 
     data_request: dict, 
-    user: User = Depends(current_user)
-    ):
+    user: User = Depends(current_user),
+    required: bool = Depends(PermissionRoleChecker({"access_queries_full", "access_queries_view", "access_queries_filter"}))
+):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
     async_session = await connect_db(DATABASE_NAME)
@@ -257,7 +261,8 @@ async def get_total_sum(
     request: Request, 
     data_request: dict, 
     user: User = Depends(current_user),
-    general_session: AsyncSession = Depends(get_db_general)
+    general_session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_queries_full", "access_queries_sum"})),
     ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
@@ -397,6 +402,7 @@ async def generate_excel_query(
     data_request: dict, 
     user: User = Depends(current_user),
     general_session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_queries_full", "access_queries_export"})),
     ):
     DATABASE_NAME = request.session['config'].get('database_name', "")
     group = request.session['group'].get('name', '')
@@ -599,6 +605,7 @@ async def generate_csv_query(
     data_request: dict, 
     user: User = Depends(current_user),
     general_session: AsyncSession = Depends(get_db_general),
+    required: bool = Depends(PermissionRoleChecker({"access_queries_full", "access_queries_export"})),
     ):
         DATABASE_NAME = request.session['config'].get('database_name', "")
         group = request.session['group'].get('name', '')

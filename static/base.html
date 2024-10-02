@@ -20,7 +20,9 @@
                         <button class="button">{{ user.email }}</button>
                     </a>
                     <div class="dropdown-content">
-                        <a href="{{ url_for('get_queries') }}">Query Table</a>
+                        {% if user.role_info.access_queries %}
+                            <a href="{{ url_for('get_queries') }}">Query Table</a>
+                        {% endif %}
                         <a href="{{ url_for('get_urls')}}">Url Table</a>
                         <a href="{{ url_for('get_history') }}">All history Table</a>
                         <a href="{{ url_for('show_menu_merge_page') }}">Query & Url Merge Table</a>

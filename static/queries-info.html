@@ -12,7 +12,9 @@
 <body>
     <div class="button-container">
         <a href="{{ url_for('show_profile', username=user.username) }}" class="back-to-menu">Back to profile</a>
+    {% if user.role_info.access_queries_full or user.role_info.access_queries_update %}
         <input type="button" value="Update Data Query" onclick="sendRequest('{{ url_for('load_queries_script') }}')">
+    {% endif %}
         <label for="last_update_date">Last Update Date: {{ last_update_date }}</label>
         <label id="last_date" for="last_update_date" title={{last_date}}>Данные есть до: {{ last_date }}</label>
         <input type="number" id="days" placeholder="Days" min="1" max="13">
@@ -20,18 +22,29 @@
     </div>
 
     <!-- Existing filters and buttons -->
-    <input type="date" id="start_date">
-    <input type="date" id="end_date">
-    <input type="text" id="search_field" style="width: 250px">
-    <label for="input_sort">Отсортировать?</label>
-    <input type="checkbox" id="input_sort">
-    <label for="input_desc">По убыванию?</label>
-    <input type="checkbox" id="input_desc">
+    {% if user.role_info.access_queries_full or user.role_info.access_queries_view or user.role_info.access_queries_filter%}
+        <input type="date" id="start_date">
+        <input type="date" id="end_date">
+    {% endif %}
+    {% if user.role_info.access_queries_full or user.role_info.access_queries_filter %}
+        <input type="text" id="search_field" style="width: 250px">
+        <label for="input_sort">Отсортировать?</label>
+        <input type="checkbox" id="input_sort">
+        <label for="input_desc">По убыванию?</label>
+        <input type="checkbox" id="input_desc">
+    {% endif %}
+    {% if user.role_info.access_queries_full or user.role_info.access_queries_view or user.role_info.access_queries_filter %}
     <input type="button" value="Отфильтровать" onclick="UpdateTable();">
-    <input type="button" value="Excel" onclick="generateExcel('{{ url_for('generate_excel_query')}}');">
-    <input type="button" value="Csv" onclick="generateCsv('{{ url_for('generate_csv_query')}}');">
-    <input type="button" value="Вычислить суммы" onclick="getTotalSum('{{ url_for('get_total_sum')}}');">
-    
+    {% endif %}
+    {% if user.role_info.access_queries_full or user.role_info.access_queries_export %}
+        <input type="button" value="Excel" onclick="generateExcel('{{ url_for('generate_excel_query')}}');">
+        <input type="button" value="Csv" onclick="generateCsv('{{ url_for('generate_csv_query')}}');">
+    {% endif %}
+    {% if user.role_info.access_queries_full or user.role_info.access_queries_sum %}
+        <input type="button" value="Вычислить суммы" onclick="getTotalSum('{{ url_for('get_total_sum')}}');">
+    {% endif %}
+
+    {% if user.role_info.access_queries_full or user.role_info.access_queries_view %}
     <table id="example" class="display nowrap" style="width:100%;">
         <thead id="thead_t">
             <tr id="head_t">
@@ -42,12 +55,13 @@
             <!-- Table body will be inserted here dynamically -->
         </tbody>
     </table>
-    
+
     <div class="pagination">
         <button id="prev" onclick="PrevPage()">Previous</button>
         <button id="cur" disabled>Current</button>
         <button id="next" onclick="NextPage()">Next</button>
     </div>
+    {% endif %}
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdn.datatables.net/2.0.6/js/dataTables.js"></script>
@@ -431,20 +445,20 @@
         state = "decrease";
         metric_type = "R";
 
-        prev_start_date = document.getElementById('start_date').value;
-        prev_end_date = document.getElementById('end_date').value;
-        prev_search_text = document.getElementById("search_field").value;
+        prev_start_date = document.getElementById('start_date') ? document.getElementById('start_date').value : null;
+        prev_end_date = document.getElementById('end_date') ? document.getElementById('end_date').value : null;
+        prev_search_text = document.getElementById("search_field") ? document.getElementById("search_field").value : null;
 
         var url = "{{ url_for('get_queries') }}";
         var params = {
             length: 50, // количество отображаемых элементов
             start: 0, // номер страницы
-            start_date: document.getElementById('start_date').value, // Дата начала поиска
-            end_date: document.getElementById('end_date').value, // Дата окончания поиска
+            start_date: document.getElementById('start_date') ? document.getElementById('start_date').value : null, // Дата начала поиска
+            end_date:document.getElementById('end_date') ? document.getElementById('end_date').value : null, // Дата окончания поиска
             amount: calculateDays(),
-            search_text: document.getElementById("search_field").value,
-            sort_result: document.getElementById("input_sort").checked,
-            sort_desc: document.getElementById("input_desc").checked,
+            search_text: document.getElementById("search_field") ? document.getElementById("search_field").value : '',
+            sort_result: document.getElementById("input_sort") ? document.getElementById("input_sort").checked : false,
+            sort_desc: document.getElementById("input_desc") ? document.getElementById("input_desc").checked : false,
             button_date: global_date,
             button_state: state,
             metric_type: metric_type,

@@ -2,7 +2,11 @@ from datetime import datetime
 from email_validator import validate_email
 from email_validator.exceptions_types import EmailSyntaxError, EmailNotValidError
 from typing import Optional, Iterable
+
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
+
 from .exceptions import InvalidEmail
 
 from fastapi import Depends
@@ -27,6 +31,25 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = SECRET
 
     verification_token_secret = SECRET
+
+    async def get(self, user_id: int) -> Optional[User]:
+        """
+        Get a user by id.
+
+        :param id: Id. of the user to retrieve.
+        :raises UserNotExists: The user does not exist.
+        :return: A user.
+        """
+        async with async_session_general() as session:
+            result = await session.execute(
+                select(User).options(selectinload(User.role_info)).filter(User.id == user_id)
+            )
+            user = result.scalars().first()
+
+        if user is None:
+            raise exceptions.UserNotExists()
+
+        return user
 
     async def batch_create(self, users_create: Iterable[UserCreate], safe: bool = False):
         """
