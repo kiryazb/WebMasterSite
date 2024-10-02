@@ -118,7 +118,7 @@
                     
                                     <!-- Module url -->
                                     <div class="col-md-3">
-                                        <h5><div><label><input type="checkbox" name="access_url" {% if role.access_url %}checked{% endif %}> Access to URL</label></div></h5>
+                                        <h5><div><label><input type="checkbox" name="access_url" {% if role.access_url %}checked{% endif %}> Access to url</label></div></h5>
                                         <div><label><input type="checkbox" name="access_url_full" {% if role.access_url_full %}checked{% endif %}> Full access</label></div>
                                         <div><label><input type="checkbox" name="access_url_filter" {% if role.access_url_filter %}checked{% endif %}> Filtering</label></div>
                                         <div><label><input type="checkbox" name="access_url_export" {% if role.access_url_export %}checked{% endif %}> Export</label></div>
@@ -128,7 +128,7 @@
                     
                                     <!-- History Module -->
                                     <div class="col-md-3">
-                                        <h5><div><label><input type="checkbox" name="access_history" {% if role.access_history %}checked{% endif %}> Access to History</label></div></h5>
+                                        <h5><div><label><input type="checkbox" name="access_history" {% if role.access_history %}checked{% endif %}> Access to history</label></div></h5>
                                         <div><label><input type="checkbox" name="access_history_full" {% if role.access_history_full %}checked{% endif %}> Full Access</label></div>
                                         <div><label><input type="checkbox" name="access_history_view" {% if role.access_history_view %}checked{% endif %}> View</label></div>
                                         <div><label><input type="checkbox" name="access_history_export" {% if role.access_history_export %}checked{% endif %}> Export</label></div>
@@ -136,7 +136,7 @@
 
                                     <!-- URL Query Merge Module -->
                                     <div class="col-md-3">
-                                        <h5><div><label><input type="checkbox" name="access_url_query_merge" {% if role.access_url_query_merge %}checked{% endif %}> Access to URL_Query_Merge</label></div></h5>
+                                        <h5><div><label><input type="checkbox" name="access_url_query_merge" {% if role.access_url_query_merge %}checked{% endif %}> Access to url_query_merge</label></div></h5>
                                         <div><label><input type="checkbox" name="access_url_query_merge_full" {% if role.access_url_query_merge_full %}checked{% endif %}> Full Access</label></div>
                                         <div><label><input type="checkbox" name="access_url_query_merge_view" {% if role.access_url_query_merge_view %}checked{% endif %}> View</label></div>
                                         <div><label><input type="checkbox" name="access_url_query_merge_run" {% if role.access_url_query_merge_run %}checked{% endif %}> Run</label></div>
@@ -192,10 +192,17 @@
         const formData = new FormData(form);
         const url = `/config/roles/${role_id}/modules`;
         const jsonData = {};
-        formData.forEach((value, key) => {
-            jsonData[key] = value;
+        //console.log(formData);
+        //formData.forEach((value, key) => {
+        //    console.log(value);
+        //   jsonData[key] = value;
+        //});
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            // Set the value to true or false based on the checked state
+            jsonData[checkbox.name] = checkbox.checked ? true : false;
         });
-        console.log(jsonData);
+        //console.log(jsonData);
         fetch(url, {
             method: 'POST',
             headers: {
@@ -300,3 +307,4 @@
     });
 </script>
 {% endblock %}
+

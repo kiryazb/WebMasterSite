@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from sqlalchemy import select
-
+from api.config.utils import load_live_search
 from api.auth.auth_config import RoleChecker
 from api.auth.models import User
 from api.config.models import ListLrSearchSystem, LiveSearchList, YandexLr

@@ -207,11 +207,9 @@ async def edit_role(role_id: int, request: Request, session: AsyncSession = Depe
         return {"status": 200, "message": "Role updated successfully"}
     
     raise HTTPException(status_code=404, detail="Role not found")
-
 @router.post("/roles/{role_id}/modules")
 async def update_role_modules(role_id: int, request: Request, session: AsyncSession = Depends(get_db_general)):
     json_data = await request.json()
-    with open('data_output.txt', 'w', encoding='utf-8') as f: f.write(str(json_data)) 
     query = select(Role).where(Role.id == role_id)
     result = await session.execute(query)
     role = result.scalars().first()
@@ -220,8 +218,7 @@ async def update_role_modules(role_id: int, request: Request, session: AsyncSess
     
     
     for key, value in json_data.items():
-        with open('data_output.txt', 'w', encoding='utf-8') as f: f.write(str(key+" = "+value))        
-        setattr(role, key, value == "on") 
+        setattr(role, key, value) 
 
     
     await session.commit()
