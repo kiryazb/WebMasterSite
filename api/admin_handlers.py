@@ -16,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, delete, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.auth_config import current_user, RoleChecker
+from api.auth.auth_config import current_user, RoleChecker, PermissionRoleChecker
 from api.auth.models import User
 from api.config.utils import get_all_configs, get_all_groups, get_all_groups_for_user, get_all_roles, get_all_user, \
     get_config_names, get_group_names, get_groups_names_dict, get_lists_names, get_live_search_lists_names, update_list
@@ -81,7 +81,7 @@ async def show_profile(request: Request,
                        username: str,
                        user=Depends(current_user),
                        session: AsyncSession = Depends(get_db_general),
-                       required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+                       #required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
                        ):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -100,7 +100,7 @@ async def show_superuser(
         request: Request,
         user=Depends(current_user),
         session: AsyncSession = Depends(get_db_general),
-        required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
+        #required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
 ):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -122,7 +122,7 @@ async def show_list(
     request: Request,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
 ):
     config_id = request.session["config"]["config_id"]
     group_id = request.session["group"]["group_id"]
@@ -157,7 +157,7 @@ async def add_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
 ):
 
     group_name, config_name, list_name, uri_list, is_public = data.values()
@@ -205,7 +205,7 @@ async def change_list_visibility(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
 ):
     
     is_public = data["is_public"]
@@ -238,7 +238,7 @@ async def delete_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
 ):
     list_name = data["name"]
 
@@ -271,7 +271,7 @@ async def show_edit_list(
     list_id: int,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
 ):
 
     group_name = request.session["group"].get("name", "")
@@ -304,7 +304,7 @@ async def delete_list_record(
     uri: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
 ):
     uri_model = (await session.execute(select(ListURI).where(and_(ListURI.uri == uri["uri"], ListURI.list_id == list_id)))).scalars().first()
 
@@ -325,7 +325,7 @@ async def change_list_record(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
 ):
     print(data)
 
@@ -350,7 +350,7 @@ async def add_uri(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"User", "Administrator", "Superuser"}))
 ):
     record = ListURI(
         uri=data["uri"].strip(),
@@ -397,7 +397,8 @@ async def add_live_search_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search", "User"})),
+    required: bool = Depends(PermissionRoleChecker({"access_list_panel_create"})),
 ):
 
     main_domain, list_name, query_list = data.values()
@@ -446,7 +447,7 @@ async def delete_live_search_list(
     data: dict,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search"}))
 ):
     list_name = data["name"]
 
@@ -699,7 +700,7 @@ async def show_user_menu(
     request: Request,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
 ):    
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -741,7 +742,7 @@ async def show_group_menu(
     request: Request,
     user=Depends(current_user),
     session: AsyncSession = Depends(get_db_general),
-    required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"Superuser"}))
 ):
     group_name = request.session["group"].get("name", "")
     config_names = [elem[0] for elem in (await get_config_names(session, user, group_name))]
@@ -787,7 +788,7 @@ async def batch_register_excel(
         request: Request,
         file: UploadFile,
         user_manager: AsyncSession = Depends(get_user_manager),
-        required: bool = Depends(RoleChecker({"Superuser"})),
+        #required: bool = Depends(RoleChecker({"Superuser"})),
         status_code=status.HTTP_201_CREATED):
     try:
         file = await file.read()
@@ -811,7 +812,7 @@ async def batch_register(
         request: Request,
         user: User = Depends(current_user),
         user_manager: UserManager = Depends(get_user_manager),
-        required: bool = Depends(RoleChecker(required_permissions={"Superuser"})),
+        #required: bool = Depends(RoleChecker(required_permissions={"Superuser"})),
         status_code=status.HTTP_201_CREATED):
     body_bytes = await request.body()
     raw_users = body_bytes.decode("UTF-8")

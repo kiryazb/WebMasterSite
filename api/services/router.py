@@ -24,7 +24,7 @@ router = APIRouter()
 @router.get('/load-queries-script')
 async def load_queries_script(
         request: Request,
-        required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"})),
+        #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"})),
         required_permission: bool = Depends(PermissionRoleChecker({"access_queries_full", "access_queries_update"}))
 ):
     request_session = request.session
@@ -37,7 +37,7 @@ async def load_queries_script(
 @router.get('/load-urls-script')
 async def load_urls_script(
         request: Request,
-        required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+        #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
 ):
     request_session = request.session
     res = await get_all_data_urls(request_session)
@@ -49,7 +49,7 @@ async def load_urls_script(
 @router.get('/load-history-script')
 async def load_history_script(
         request: Request,
-        required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+        #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
 ) -> dict:
     try:
         request_session = request.session
@@ -62,7 +62,7 @@ async def load_history_script(
 @router.get('/load-merge-script')
 async def load_merge_script(
         request: Request,
-        required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
+        #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser"}))
 ) -> dict:
     try:
         request_session = request.session
@@ -78,7 +78,7 @@ async def load_live_search_list(
     data: dict,
     session: AsyncSession = Depends(get_db_general),
     user: User = Depends(current_user),
-    required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search"}))
+    #required: bool = Depends(RoleChecker(required_permissions={"Administrator", "Superuser", "Search"}))
 ):
     list_lr_id = int(data["list_lr_id"])
     print(list_lr_id)
