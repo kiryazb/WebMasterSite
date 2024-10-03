@@ -390,16 +390,17 @@
         </div>
 
         {% for config in all_configs %}
-
-        <div class="row">
-            <div class="cell">{{ loop.index }}</div> <!-- Порядковый номер -->
-            <div class="cell">{{ config.name }}</div>
-            <div class="cell">{{ config.user.email }}</div>
-            <div class="cell">
-                <button class="edit-btn" onclick="showEditConfigForm({{ config.id }}, '{{ config.name }}', '{{ config.database_name }}', '{{ config.access_token }}', '{{ config.user_id }}', '{{ config.host_id }}')">Edit</button>
-               <button class="delete-btn" onclick="deleteConfig('{{ url_for('delete_config', config_id=config.id) }}')">Delete</button>
-            </div>
-        </div>
+            {% if config.user.id == user.id or user.role_info.access_command_panel_full %}
+                <div class="row">
+                    <div class="cell">{{ loop.index }}</div> <!-- Порядковый номер -->
+                    <div class="cell">{{ config.name }}</div>
+                    <div class="cell">{{ config.user.email }}</div>
+                    <div class="cell">
+                        <button class="edit-btn" onclick="showEditConfigForm({{ config.id }}, '{{ config.name }}', '{{ config.database_name }}', '{{ config.access_token }}', '{{ config.user_id }}', '{{ config.host_id }}')">Edit</button>
+                    <button class="delete-btn" onclick="deleteConfig('{{ url_for('delete_config', config_id=config.id) }}')">Delete</button>
+                    </div>
+                </div>
+            {% endif %}
         {% endfor %}
     </div>
 
