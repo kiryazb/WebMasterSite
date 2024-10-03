@@ -44,7 +44,7 @@ async def add_config(request: Request,
                                                            formData["user_id"],
                                                            formData["host_id"])
 
-    config = Config(name=name,
+    config = Config(id_author=user.id, name=name,
                     database_name=database_name,
                     access_token=access_token,
                     user_id=user_id,
@@ -218,12 +218,18 @@ async def update_role_modules(role_id: int, request: Request, session: AsyncSess
     role = result.scalars().first()
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
-    
-    
+
     for key, value in json_data.items():
         setattr(role, key, value) 
 
-    
+    '''
+    # Можно обрабатывать пустые ключи на backend, отправляя только ключи со значением true, вместо отправки всех ключей 
+    keys_of_role = list(filter(lambda item: item.startswith("access"), role.__dict__.keys()))
+    for key_of_role in keys_of_role:
+        if key_of_role not in json_data.keys():
+            with open('data_output.txt', 'w', encoding='utf-8') as f: f.write(str(key_of_role + " = " + "off"))
+            setattr(role, key_of_role, False)
+    '''
     await session.commit()
     return {"message": "Role modules updated successfully"}
 

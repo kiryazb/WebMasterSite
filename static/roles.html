@@ -199,6 +199,7 @@
         checkboxes.forEach((checkbox) => {
             jsonData[checkbox.name] = checkbox.checked; // добавляем в объект состояние чекбокса (true/false)
         });
+        //console.log(1);
         console.log(jsonData);
         fetch(url, {
             method: 'POST',
