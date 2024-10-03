@@ -27,7 +27,7 @@ class Config(Base):
 
     # Используем строку для связи с Group
     groups = relationship("Group", secondary='group_config_association', back_populates="configs")
-    user = relationship("User", primaryjoin="Config.id_author == User.id")
+    user = relationship("User", primaryjoin="Config.id_author == User.id", lazy="selectin")
 
 class Role(Base):
     __tablename__ = "roles"
